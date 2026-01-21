@@ -81,8 +81,6 @@ async def unjail(ctx, member: discord.Member):
 
     await member.remove_roles(jail_role)
     await ctx.send(f"🔓 {member.mention} wurde entjailt.")
-# --- MARRIAGE SYSTEM ---
-
 marriages = {}        # user_id -> partner_id
 pending_proposals = {}  # target_id -> proposer_id
 
