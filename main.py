@@ -237,6 +237,5 @@ async def clearwarnings(ctx, member: discord.Member):
 
     del warnings[member.id]
     await ctx.send(f"🧹 Alle Warnungen von {member.mention} wurden gelöscht.")
-
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
