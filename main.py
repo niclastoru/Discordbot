@@ -22,8 +22,6 @@ async def ship(ctx, member: discord.Member):
     love = random.randint(0, 100)
     await ctx.send(
         f"💖 {ctx.author.display_name} × {member.display_name} = **{love}% Liebe**"
-    )
-
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, role_name: str):
@@ -35,7 +33,6 @@ async def role(ctx, member: discord.Member, *, role_name: str):
     await member.add_roles(role)
     await ctx.send(f"✅ Rolle **{role.name}** wurde {member.display_name} gegeben.")
 
-bot.run(os.environ["TOKEN"])
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason=None):
@@ -141,3 +138,4 @@ async def marrystatus(ctx):
         await ctx.send(f"💍 Du bist mit **{partner.mention}** verheiratet.")
     else:
         await ctx.send("💍 Du bist verheiratet, aber dein Partner ist nicht auf dem Server.")
+bot.run(os.environ["TOKEN"])
