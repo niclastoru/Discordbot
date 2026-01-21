@@ -51,3 +51,38 @@ async def ban(ctx, member: discord.Member, *, reason=None):
         await ctx.send("❌ Ich habe keine Rechte, diesen User zu bannen.")
     except discord.HTTPException:
         await ctx.send("❌ Fehler beim Bannen.")
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+    jail_role = discord.utils.get(ctx.guild.roles, name="Jail")
+
+    if not jail_role:
+        await ctx.send("❌ Jail-Rolle nicht gefunden.")
+        return
+
+    if jail_role in member.roles:
+        await ctx.send("⚠️ User ist bereits im Jail.")
+        return
+
+    # Rollen entfernen (außer @everyone)
+    for role in member.roles:
+        if role != ctx.guild.default_role:
+            await member.remove_roles(role)
+
+    await member.add_roles(jail_role)
+    await ctx.send(f"🚔 {member.mention} wurde gejailt.\n📝 Grund: {reason}")
+    @bot.command()
+@commands.has_permissions(moderate_members=True)
+async def unjail(ctx, member: discord.Member):
+    jail_role = discord.utils.get(ctx.guild.roles, name="Jail")
+
+    if not jail_role:
+        await ctx.send("❌ Jail-Rolle nicht gefunden.")
+        return
+
+    if jail_role not in member.roles:
+        await ctx.send("⚠️ User ist nicht im Jail.")
+        return
+
+    await member.remove_roles(jail_role)
+    await ctx.send(f"✅ {member.mention} wurde aus dem Jail entlassen.")
