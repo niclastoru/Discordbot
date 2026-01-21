@@ -36,3 +36,18 @@ async def role(ctx, member: discord.Member, *, role_name: str):
     await ctx.send(f"✅ Rolle **{role.name}** wurde {member.display_name} gegeben.")
 
 bot.run(os.environ["TOKEN"])
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason=None):
+    if reason is None:
+        reason = "Kein Grund angegeben"
+
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(
+            f"🔨 **{member}** wurde gebannt.\n📄 **Grund:** {reason}"
+        )
+    except discord.Forbidden:
+        await ctx.send("❌ Ich habe keine Rechte, diesen User zu bannen.")
+    except discord.HTTPException:
+        await ctx.send("❌ Fehler beim Bannen.")
