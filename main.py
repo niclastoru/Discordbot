@@ -144,6 +144,19 @@ async def marrystatus(ctx):
         await ctx.send(f"💍 Du bist mit **{partner.mention}** verheiratet.")
     else:
         await ctx.send("💍 Du bist verheiratet, aber dein Partner ist nicht auf dem Server.")
+        @bot.command()
+async def avatar(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+
+    embed = discord.Embed(
+        title=f"🖼️ Avatar von {member}",
+        color=discord.Color.blue()
+    )
+    embed.set_image(url=member.avatar.url)
+    embed.set_footer(text=f"Angefordert von {ctx.author}")
+
+    await ctx.send(embed=embed)
 
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
