@@ -157,5 +157,31 @@ async def avatar(ctx, member: discord.Member = None):
     embed.set_footer(text=f"Angefordert von {ctx.author}")
 
     await ctx.send(embed=embed)
+
+@bot.command()
+async def userinfo(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
+
+    embed = discord.Embed(
+        title=f"👤 Userinfo von {member}",
+        color=discord.Color.blurple()
+    )
+
+    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
+
+    embed.add_field(name="🆔 ID", value=member.id, inline=False)
+    embed.add_field(name="📅 Account erstellt", value=member.created_at.strftime("%d.%m.%Y"), inline=True)
+    embed.add_field(name="📥 Server beigetreten", value=member.joined_at.strftime("%d.%m.%Y"), inline=True)
+    embed.add_field(
+        name="🎭 Rollen",
+        value=", ".join([role.mention for role in member.roles[1:]]) or "Keine",
+        inline=False
+    )
+
+    embed.set_footer(text=f"Angefordert von {ctx.author}", icon_url=ctx.author.avatar.url)
+
+    await ctx.send(embed=embed)
+
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
