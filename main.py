@@ -188,54 +188,55 @@ async def userinfo(ctx, member: discord.Member = None):
 warnings = {}  # user_id : list of reasons
 
 @bot.command()
-@commands.has_permissions(kick_members=True)
+@commands.has_permissions(administrator=True)
 async def warn(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
-    if member.bot:
-        await ctx.send("🤖 Bots kann man nicht warnen.")
-        return
-
-    user_warnings = warnings.get(member.id, [])
+    user_warnings = warn_data.get(member.id, [])
     user_warnings.append(reason)
-    warnings[member.id] = user_warnings
+    warn_data[member.id] = user_warnings
 
-    # DM an User
     try:
         await member.send(
             f"⚠️ **Du wurdest auf {ctx.guild.name} verwarnt!**\n"
-            f"📝 **Grund:** {reason}\n"
-            f"📊 **Warnungen:** {len(user_warnings)}"
+            f"📄 **Grund:** {reason}\n"
+            f"📌 **Verwarnungen:** {len(user_warnings)}"
         )
     except discord.Forbidden:
         await ctx.send("⚠️ Konnte keine DM senden (DMs geschlossen).")
 
     await ctx.send(
         f"⚠️ {member.mention} wurde verwarnt.\n"
-        f"📝 Grund: **{reason}**\n"
-        f"📊 Warnungen: **{len(user_warnings)}**"
+        f"📄 Grund: **{reason}**\n"
+        f"📌 Verwarnungen: **{len(user_warnings)}**"
     )
 
 @bot.command()
-@commands.has_permissions(kick_members=True)
+@commands.has_permissions(administrator=True)
 async def warnings(ctx, member: discord.Member):
-    user_warnings = warnings.get(member.id)
+    user_warnings = warn_data.get(member.id)
 
     if not user_warnings:
-        await ctx.send(f"✅ {member.mention} hat keine Warnungen.")
+        await ctx.send(f"✅ {member.mention} hat keine Verwarnungen.")
         return
 
     text = "\n".join([f"{i+1}. {w}" for i, w in enumerate(user_warnings)])
     await ctx.send(
-        f"⚠️ **Warnungen von {member.display_name}:**\n{text}"
+        f"⚠️ **Verwarnungen von {member.display_name}:**\n{text}"
     )
 
 @bot.command()
-@commands.has_permissions(kick_members=True)
+@commands.has_permissions(administrator=True)
 async def clearwarnings(ctx, member: discord.Member):
-    if member.id not in warnings:
-        await ctx.send("ℹ️ User hat keine Warnungen.")
+    if member.id not in warn_data:
+        await ctx.send("ℹ️ User hat keine Verwarnungen.")
         return
 
-    del warnings[member.id]
-    await ctx.send(f"🧹 Alle Warnungen von {member.mention} wurden gelöscht.")
+    del warn_data[member.id]
+    await ctx.send(f"🧹 Verwarnungen von {member.mention} wurden gelöscht.")
+
+@warn.error
+async def warn_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ Du hast keine Rechte für diesen Command.")
+        
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
