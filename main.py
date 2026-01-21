@@ -3,16 +3,19 @@ from discord.ext import commands
 import random
 import os
 
+# ===== INTENTS =====
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix=",", intents=intents)
 
+# ===== READY =====
 @bot.event
 async def on_ready():
     print(f"✅ Bot online als {bot.user}")
 
+# ===== BASIC COMMANDS =====
 @bot.command()
 async def ping(ctx):
     await ctx.send("Pong 🏓")
@@ -22,6 +25,9 @@ async def ship(ctx, member: discord.Member):
     love = random.randint(0, 100)
     await ctx.send(
         f"💖 {ctx.author.display_name} × {member.display_name} = **{love}% Liebe**"
+    )
+
+# ===== ROLE COMMAND =====
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, role_name: str):
@@ -33,21 +39,19 @@ async def role(ctx, member: discord.Member, *, role_name: str):
     await member.add_roles(role)
     await ctx.send(f"✅ Rolle **{role.name}** wurde {member.display_name} gegeben.")
 
+# ===== BAN COMMAND =====
 @bot.command()
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason=None):
-    if reason is None:
-        reason = "Kein Grund angegeben"
-
+async def ban(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
     try:
         await member.ban(reason=reason)
-        await ctx.send(
-            f"🔨 **{member}** wurde gebannt.\n📄 **Grund:** {reason}"
-        )
+        await ctx.send(f"🔨 **{member}** wurde gebannt.\n📄 **Grund:** {reason}")
     except discord.Forbidden:
-        await ctx.send("❌ Ich habe keine Rechte, diesen User zu bannen.")
+        await ctx.send("❌ Ich habe keine Rechte.")
     except discord.HTTPException:
         await ctx.send("❌ Fehler beim Bannen.")
+
+# ===== JAIL SYSTEM =====
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
@@ -63,6 +67,7 @@ async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
 
     await member.add_roles(jail_role, reason=reason)
     await ctx.send(f"🔒 {member.mention} wurde gejailt.\n📝 Grund: **{reason}**")
+
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def unjail(ctx, member: discord.Member):
@@ -78,10 +83,9 @@ async def unjail(ctx, member: discord.Member):
 
     await member.remove_roles(jail_role)
     await ctx.send(f"🔓 {member.mention} wurde entjailt.")
-     # ===== MARRY SYSTEM =====
 
+# ===== MARRY SYSTEM =====
 marriages = {}  # user_id : partner_id
-
 
 @bot.command()
 async def marry(ctx, member: discord.Member):
@@ -104,8 +108,9 @@ async def marry(ctx, member: discord.Member):
     marriages[ctx.author.id] = member.id
     marriages[member.id] = ctx.author.id
 
-    await ctx.send(f"💍 **{ctx.author.mention} und {member.mention} sind jetzt verheiratet!** 🎉")
-
+    await ctx.send(
+        f"💍 **{ctx.author.mention} und {member.mention} sind jetzt verheiratet!** 🎉"
+    )
 
 @bot.command()
 async def divorce(ctx):
@@ -120,10 +125,11 @@ async def divorce(ctx):
     del marriages[ctx.author.id]
 
     if partner:
-        await ctx.send(f"💔 **{ctx.author.mention} und {partner.mention} sind jetzt geschieden.**")
+        await ctx.send(
+            f"💔 **{ctx.author.mention} und {partner.mention} sind jetzt geschieden.**"
+        )
     else:
         await ctx.send("💔 Ehe beendet.")
-
 
 @bot.command()
 async def marrystatus(ctx):
@@ -138,4 +144,6 @@ async def marrystatus(ctx):
         await ctx.send(f"💍 Du bist mit **{partner.mention}** verheiratet.")
     else:
         await ctx.send("💍 Du bist verheiratet, aber dein Partner ist nicht auf dem Server.")
+
+# ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
