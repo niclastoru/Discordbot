@@ -81,18 +81,22 @@ async def unjail(ctx, member: discord.Member):
 
     await member.remove_roles(jail_role)
     await ctx.send(f"🔓 {member.mention} wurde entjailt.")
-marriages = {}        # user_id -> partner_id
-pending_proposals = {}  # target_id -> proposer_id
+     # ===== MARRY SYSTEM =====
+
+marriages = {}  # user_id : partner_id
+
 
 @bot.command()
 async def marry(ctx, member: discord.Member):
-    author = ctx.author
-
-    if author.id == member.id:
-        await ctx.send("❌ Du kannst dich nicht selbst heiraten.")
+    if member.bot:
+        await ctx.send("🤖 Bots kann man nicht heiraten.")
         return
 
-    if author.id in marriages:
+    if member == ctx.author:
+        await ctx.send("💀 Du kannst dich nicht selbst heiraten.")
+        return
+
+    if ctx.author.id in marriages:
         await ctx.send("❌ Du bist bereits verheiratet.")
         return
 
@@ -100,67 +104,40 @@ async def marry(ctx, member: discord.Member):
         await ctx.send("❌ Diese Person ist bereits verheiratet.")
         return
 
-    pending_proposals[member.id] = author.id
-    await ctx.send(
-        f"💍 {member.mention}, {author.mention} möchte dich heiraten!\n"
-        f"Schreibe **,accept** oder **,decline**"
-    )
+    marriages[ctx.author.id] = member.id
+    marriages[member.id] = ctx.author.id
 
-@bot.command()
-async def accept(ctx):
-    target = ctx.author
+    await ctx.send(f"💍 **{ctx.author.mention} und {member.mention} sind jetzt verheiratet!** 🎉")
 
-    if target.id not in pending_proposals:
-        await ctx.send("❌ Du hast keine offene Anfrage.")
-        return
-
-    proposer_id = pending_proposals.pop(target.id)
-
-    marriages[target.id] = proposer_id
-    marriages[proposer_id] = target.id
-
-    proposer = ctx.guild.get_member(proposer_id)
-    await ctx.send(f"💖 {target.mention} und {proposer.mention} sind jetzt verheiratet!")
-
-@bot.command()
-async def decline(ctx):
-    target = ctx.author
-
-    if target.id not in pending_proposals:
-        await ctx.send("❌ Du hast keine offene Anfrage.")
-        return
-
-    proposer_id = pending_proposals.pop(target.id)
-    proposer = ctx.guild.get_member(proposer_id)
-
-    await ctx.send(f"💔 {target.mention} hat den Antrag von {proposer.mention} abgelehnt.")
 
 @bot.command()
 async def divorce(ctx):
-    author = ctx.author
-
-    if author.id not in marriages:
+    if ctx.author.id not in marriages:
         await ctx.send("❌ Du bist nicht verheiratet.")
         return
 
-    partner_id = marriages.pop(author.id)
-    marriages.pop(partner_id, None)
-
+    partner_id = marriages[ctx.author.id]
     partner = ctx.guild.get_member(partner_id)
-    await ctx.send(f"💔 {author.mention} und {partner.mention} sind jetzt geschieden.")
-@bot.command()
-async def marrystatus(ctx, member: discord.Member = None):
-    user = member or ctx.author
 
-    if user.id not in marriages:
-        await ctx.send(f"💔 {user.mention} ist nicht verheiratet.")
+    del marriages[partner_id]
+    del marriages[ctx.author.id]
+
+    if partner:
+        await ctx.send(f"💔 **{ctx.author.mention} und {partner.mention} sind jetzt geschieden.**")
+    else:
+        await ctx.send("💔 Ehe beendet.")
+
+
+@bot.command()
+async def marrystatus(ctx):
+    if ctx.author.id not in marriages:
+        await ctx.send("💔 Du bist aktuell nicht verheiratet.")
         return
 
-    partner_id = marriages[user.id]
+    partner_id = marriages[ctx.author.id]
     partner = ctx.guild.get_member(partner_id)
 
-    await ctx.send(
-        f"💍 **Marriage Status**\n"
-        f"👤 {user.mention}\n"
-        f"❤️ Verheiratet mit: {partner.mention}"
-    )
+    if partner:
+        await ctx.send(f"💍 Du bist mit **{partner.mention}** verheiratet.")
+    else:
+        await ctx.send("💍 Du bist verheiratet, aber dein Partner ist nicht auf dem Server.")
