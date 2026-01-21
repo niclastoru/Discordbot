@@ -144,7 +144,7 @@ async def marrystatus(ctx):
         await ctx.send(f"💍 Du bist mit **{partner.mention}** verheiratet.")
     else:
         await ctx.send("💍 Du bist verheiratet, aber dein Partner ist nicht auf dem Server.")
-        @bot.command()
+@bot.command()
 async def avatar(ctx, member: discord.Member = None):
     if member is None:
         member = ctx.author
