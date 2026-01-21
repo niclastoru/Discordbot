@@ -54,7 +54,7 @@ async def ban(ctx, member: discord.Member, *, reason=None):
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
-    jail_role = discord.utils.get(ctx.guild.roles, name="Jail")
+    jail_role = discord.utils.get(ctx.guild.roles, name="jailed")
 
     if not jail_role:
         await ctx.send("❌ Jail-Rolle existiert nicht.")
@@ -66,18 +66,3 @@ async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
 
     await member.add_roles(jail_role, reason=reason)
     await ctx.send(f"🔒 {member.mention} wurde gejailt.\n📝 Grund: **{reason}**")
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def unjail(ctx, member: discord.Member):
-    jail_role = discord.utils.get(ctx.guild.roles, name="Jail")
-
-    if not jail_role:
-        await ctx.send("❌ Jail-Rolle existiert nicht.")
-        return
-
-    if jail_role not in member.roles:
-        await ctx.send("⚠️ User ist nicht im Jail.")
-        return
-
-    await member.remove_roles(jail_role)
-    await ctx.send(f"🔓 {member.mention} wurde entjailt.")
