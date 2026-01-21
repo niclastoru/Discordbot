@@ -150,3 +150,19 @@ async def divorce(ctx):
 
     partner = ctx.guild.get_member(partner_id)
     await ctx.send(f"💔 {author.mention} und {partner.mention} sind jetzt geschieden.")
+@bot.command()
+async def marrystatus(ctx, member: discord.Member = None):
+    user = member or ctx.author
+
+    if user.id not in marriages:
+        await ctx.send(f"💔 {user.mention} ist nicht verheiratet.")
+        return
+
+    partner_id = marriages[user.id]
+    partner = ctx.guild.get_member(partner_id)
+
+    await ctx.send(
+        f"💍 **Marriage Status**\n"
+        f"👤 {user.mention}\n"
+        f"❤️ Verheiratet mit: {partner.mention}"
+    )
