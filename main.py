@@ -81,3 +81,72 @@ async def unjail(ctx, member: discord.Member):
 
     await member.remove_roles(jail_role)
     await ctx.send(f"🔓 {member.mention} wurde entjailt.")
+# --- MARRIAGE SYSTEM ---
+
+marriages = {}        # user_id -> partner_id
+pending_proposals = {}  # target_id -> proposer_id
+
+@bot.command()
+async def marry(ctx, member: discord.Member):
+    author = ctx.author
+
+    if author.id == member.id:
+        await ctx.send("❌ Du kannst dich nicht selbst heiraten.")
+        return
+
+    if author.id in marriages:
+        await ctx.send("❌ Du bist bereits verheiratet.")
+        return
+
+    if member.id in marriages:
+        await ctx.send("❌ Diese Person ist bereits verheiratet.")
+        return
+
+    pending_proposals[member.id] = author.id
+    await ctx.send(
+        f"💍 {member.mention}, {author.mention} möchte dich heiraten!\n"
+        f"Schreibe **,accept** oder **,decline**"
+    )
+
+@bot.command()
+async def accept(ctx):
+    target = ctx.author
+
+    if target.id not in pending_proposals:
+        await ctx.send("❌ Du hast keine offene Anfrage.")
+        return
+
+    proposer_id = pending_proposals.pop(target.id)
+
+    marriages[target.id] = proposer_id
+    marriages[proposer_id] = target.id
+
+    proposer = ctx.guild.get_member(proposer_id)
+    await ctx.send(f"💖 {target.mention} und {proposer.mention} sind jetzt verheiratet!")
+
+@bot.command()
+async def decline(ctx):
+    target = ctx.author
+
+    if target.id not in pending_proposals:
+        await ctx.send("❌ Du hast keine offene Anfrage.")
+        return
+
+    proposer_id = pending_proposals.pop(target.id)
+    proposer = ctx.guild.get_member(proposer_id)
+
+    await ctx.send(f"💔 {target.mention} hat den Antrag von {proposer.mention} abgelehnt.")
+
+@bot.command()
+async def divorce(ctx):
+    author = ctx.author
+
+    if author.id not in marriages:
+        await ctx.send("❌ Du bist nicht verheiratet.")
+        return
+
+    partner_id = marriages.pop(author.id)
+    marriages.pop(partner_id, None)
+
+    partner = ctx.guild.get_member(partner_id)
+    await ctx.send(f"💔 {author.mention} und {partner.mention} sind jetzt geschieden.")
