@@ -157,6 +157,5 @@ async def avatar(ctx, member: discord.Member = None):
     embed.set_footer(text=f"Angefordert von {ctx.author}")
 
     await ctx.send(embed=embed)
-
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
