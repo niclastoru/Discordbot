@@ -98,17 +98,33 @@ async def userinfo(ctx, member: discord.Member = None):
 # ================== JAIL ==================
 @bot.command()
 @commands.has_permissions(moderate_members=True)
-async def jail(ctx, member: discord.Member, *, reason="Kein Grund"):
-    role = discord.utils.get(ctx.guild.roles, name="jailed")
-    ensure_akte(member)
-akten[str(member.id)]["jails"] += 1
-save_akten(akten)
-    if not role:
-        await ctx.send("❌ Rolle **jailed** existiert nicht.")
-        return
-    await member.add_roles(role)
-    await ctx.send(f"🔒 {member.mention} wurde gejailt | **{reason}**")
+async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+    ensure_akte(member)  # ✅ HIER rein, NICHT oben im Script
 
+    jail_role = discord.utils.get(ctx.guild.roles, name="jailed")
+    if not jail_role:
+        await ctx.send("❌ Die Jail-Rolle `jailed` existiert nicht.")
+        return
+
+    # alte Jail-Rollen entfernen
+    for role in member.roles:
+        if role.name.lower().startswith("jail"):
+            await member.remove_roles(role)
+
+    await member.add_roles(jail_role, reason=reason)
+
+    # 📁 IN AKTE EINTRAGEN
+    akten[str(member.id)]["jails"].append({
+        "mod": ctx.author.name,
+        "reason": reason
+    })
+    save_akten(akten)
+
+    await ctx.send(
+        f"🔒 {member.mention} wurde **gejailt**.\n"
+        f"📝 Grund: **{reason}**\n"
+        f"📁 Eintrag zur Akte hinzugefügt."
+    )
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def unjail(ctx, member: discord.Member):
