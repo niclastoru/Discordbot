@@ -5,6 +5,8 @@ import os
 warn_data = {}
 import json
 import os
+from openai import OpenAI
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 XP_FILE = "xp.json"
 
@@ -348,7 +350,20 @@ async def rank(ctx, member: discord.Member = None):
         f"⭐ Level: **{level}**\n"
         f"✨ XP: **{xp}**"
     )
-    
+    async def ask_ai(prompt: str):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Du bist ein cooler, respektvoller Discord-Bot. Antworte locker und menschlich."
+            },
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200,
+        temperature=0.8
+    )
+    return response.choices[0].message.content
 @bot.event
 async def on_message(message):
     if message.author.bot:
