@@ -3,6 +3,8 @@ from discord.ext import commands
 import random
 import json
 import os
+from discord.ui import View, Button
+from discord import ButtonStyle, Embed
 
 # ================== INTENTS ==================
 intents = discord.Intents.default()
