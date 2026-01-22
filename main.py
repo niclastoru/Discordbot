@@ -472,6 +472,9 @@ async def ttt(ctx, member: discord.Member):
     )
 
     class AcceptView(View):
+        def __init__(self):
+            super().__init__(timeout=60)
+
         @Button(label="✅ Annehmen", style=ButtonStyle.success)
         async def accept(self, interaction: discord.Interaction, button: Button):
             if interaction.user != member:
@@ -486,7 +489,7 @@ async def ttt(ctx, member: discord.Member):
                 view=game
             )
 
-    await ctx.send(embed=embed, view=AcceptView())
-    
+    view = AcceptView()
+    await ctx.send(embed=embed, view=view)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
