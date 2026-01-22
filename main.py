@@ -20,6 +20,20 @@ def save_xp(data):
 
 xp_data = load_xp()
 
+AUTORESPONDER_FILE = "autoresponder.json"
+
+def load_autoresponder():
+    if not os.path.exists(AUTORESPONDER_FILE):
+        return {}
+    with open(AUTORESPONDER_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_autoresponder(data):
+    with open(AUTORESPONDER_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+autoresponder = load_autoresponder()
+
 # ===== INTENTS =====
 intents = discord.Intents.default()
 intents.message_content = True
