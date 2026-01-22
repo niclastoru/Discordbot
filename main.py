@@ -3,7 +3,7 @@ from discord.ext import commands
 import random
 import json
 import os
-from discord.ui import View, Button
+from discord.ui import View, button
 from discord import ButtonStyle, Embed
 print(discord.__version__)
 
