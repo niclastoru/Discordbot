@@ -32,6 +32,19 @@ coins = load_json(COIN_FILE)
 autoresponder = load_json(AUTORESPONDER_FILE)
 warn_data = {}
 
+AKTE_FILE = "akte.json"
+
+def load_akten():
+    if not os.path.exists(AKTE_FILE):
+        return {}
+    with open(AKTE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_akten(data):
+    with open(AKTE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+akten = load_akten()
 # ================== READY ==================
 @bot.event
 async def on_ready():
