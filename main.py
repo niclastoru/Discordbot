@@ -358,5 +358,25 @@ async def rank(ctx, member: discord.Member = None):
         f"⭐ Level: **{level}**\n"
         f"✨ XP: **{xp}**"
     )
+@bot.command()
+async def top(ctx):
+    if not xp_data:
+        await ctx.send("❌ Noch keine XP-Daten.")
+        return
+
+    sorted_users = sorted(
+        xp_data.items(),
+        key=lambda x: (x[1]["level"], x[1]["xp"]),
+        reverse=True
+    )
+
+    text = ""
+    for i, (user_id, data) in enumerate(sorted_users[:10], start=1):
+        user = ctx.guild.get_member(int(user_id))
+        if user:
+            text += f"{i}. {user.display_name} — Level {data['level']}\n"
+
+    await ctx.send(f"🏆 **Top 10 Levels**\n{text}")
+    
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
