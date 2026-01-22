@@ -315,5 +315,30 @@ async def pay(ctx, member: discord.Member, amount: int):
     await ctx.send(
         f"💸 {ctx.author.mention} hat {member.mention} **{amount} Coins** gesendet."
     )
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    user_id = str(message.author.id)
+    xp_data.setdefault(user_id, {"xp": 0, "level": 1})
+
+    xp_data[user_id]["xp"] += 5  # XP pro Nachricht
+
+    current_xp = xp_data[user_id]["xp"]
+    current_level = xp_data[user_id]["level"]
+
+    # Level-Berechnung (einfach & stabil)
+    needed_xp = current_level * 100
+
+    if current_xp >= needed_xp:
+        xp_data[user_id]["level"] += 1
+        xp_data[user_id]["xp"] = 0
+        await message.channel.send(
+            f"🎉 {message.author.mention} ist jetzt **Level {xp_data[user_id]['level']}**!"
+        )
+
+    save_xp(xp_data)
+    await bot.process_commands(message)
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
