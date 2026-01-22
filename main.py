@@ -3,6 +3,22 @@ from discord.ext import commands
 import random
 import os
 warn_data = {}
+import json
+import os
+
+XP_FILE = "xp.json"
+
+def load_xp():
+    if not os.path.exists(XP_FILE):
+        return {}
+    with open(XP_FILE, "r") as f:
+        return json.load(f)
+
+def save_xp(data):
+    with open(XP_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+xp_data = load_xp()
 
 # ===== INTENTS =====
 intents = discord.Intents.default()
