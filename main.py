@@ -96,6 +96,51 @@ class TicTacToe(View):
         )
         embed.set_footer(text=f"Am Zug: {self.turn.display_name}")
         return embed
+
+class TTTButton(Button):
+    def __init__(self, index, game):
+        super().__init__(style=ButtonStyle.secondary, label=" ", row=index // 3)
+        self.index = index
+        self.game = game
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user != self.game.turn:
+            await interaction.response.send_message(
+                "❌ Du bist nicht dran!", ephemeral=True
+            )
+            return
+
+        if self.game.board[self.index] != "⬜":
+            await interaction.response.send_message(
+                "❌ Feld ist schon belegt!", ephemeral=True
+            )
+            return
+
+        symbol = "❌" if self.game.turn == self.game.p1 else "⭕"
+        self.game.board[self.index] = symbol
+        self.label = symbol
+        self.disabled = True
+
+        if self.game.check_win(symbol):
+            for item in self.game.children:
+                item.disabled = True
+
+            win_embed = self.game.get_embed()
+            win_embed.title = "🎉 Spiel beendet!"
+            win_embed.description += f"\n\n🏆 **{interaction.user.mention} hat gewonnen!**"
+
+            await interaction.response.edit_message(embed=win_embed, view=self.game)
+            return
+
+        if "⬜" not in self.game.board:
+            draw_embed = self.game.get_embed()
+            draw_embed.title = "🤝 Unentschieden!"
+            await interaction.response.edit_message(embed=draw_embed, view=self.game)
+            return
+
+        self.game.turn = self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
+        await interaction.response.edit_message(embed=self.game.get_embed(), view=self.game)
+        
 # ================== READY ==================
 @bot.event
 async def on_ready():
