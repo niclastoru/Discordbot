@@ -98,9 +98,13 @@ class TicTacToe(View):
         embed.set_footer(text=f"Am Zug: {self.turn.display_name}")
         return embed
 
-class TTTButton(Button):
+class TTTButton(discord.ui.Button):
     def __init__(self, index, game):
-        super().__init__(style=ButtonStyle.secondary, label=" ", row=index // 3)
+        super().__init__(
+            style=discord.ButtonStyle.secondary,
+            label=" ",
+            row=index // 3
+        )
         self.index = index
         self.game = game
 
@@ -126,21 +130,25 @@ class TTTButton(Button):
             for item in self.game.children:
                 item.disabled = True
 
-            win_embed = self.game.get_embed()
-            win_embed.title = "🎉 Spiel beendet!"
-            win_embed.description += f"\n\n🏆 **{interaction.user.mention} hat gewonnen!**"
-
-            await interaction.response.edit_message(embed=win_embed, view=self.game)
+            embed = self.game.get_embed()
+            embed.title = "🎉 Spiel beendet!"
+            embed.description += f"\n\n🏆 **{interaction.user.mention} hat gewonnen!**"
+            await interaction.response.edit_message(embed=embed, view=self.game)
             return
 
         if "⬜" not in self.game.board:
-            draw_embed = self.game.get_embed()
-            draw_embed.title = "🤝 Unentschieden!"
-            await interaction.response.edit_message(embed=draw_embed, view=self.game)
+            embed = self.game.get_embed()
+            embed.title = "🤝 Unentschieden!"
+            await interaction.response.edit_message(embed=embed, view=self.game)
             return
 
-        self.game.turn = self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
-        await interaction.response.edit_message(embed=self.game.get_embed(), view=self.game)
+        self.game.turn = (
+            self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
+        )
+        await interaction.response.edit_message(
+            embed=self.game.get_embed(),
+            view=self.game
+        )
         
 # ================== READY ==================
 @bot.event
