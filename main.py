@@ -238,6 +238,66 @@ async def clearwarnings(ctx, member: discord.Member):
 async def warn_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("❌ Du hast keine Rechte für diesen Command.")
-        
+
+import json
+import os
+
+COIN_FILE = "coins.json"
+
+def load_coins():
+    if not os.path.exists(COIN_FILE):
+        return {}
+    with open(COIN_FILE, "r") as f:
+        return json.load(f)
+
+def save_coins(data):
+    with open(COIN_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+coins = load_coins()
+
+@bot.command()
+async def bal(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    balance = coins.get(str(member.id), 0)
+
+    await ctx.send(f"💰 **{member.display_name}** hat **{balance} Coins**.")
+
+daily_claimed = set()
+
+@bot.command()
+async def daily(ctx):
+    user_id = str(ctx.author.id)
+
+    if user_id in daily_claimed:
+        await ctx.send("⏳ Du hast deine Daily Coins heute schon abgeholt.")
+        return
+
+    coins[user_id] = coins.get(user_id, 0) + 100
+    save_coins(coins)
+    daily_claimed.add(user_id)
+
+    await ctx.send("🎁 Du hast **100 Coins** erhalten!")
+
+@bot.command()
+async def pay(ctx, member: discord.Member, amount: int):
+    sender = str(ctx.author.id)
+    receiver = str(member.id)
+
+    if amount <= 0:
+        await ctx.send("❌ Ungültiger Betrag.")
+        return
+
+    if coins.get(sender, 0) < amount:
+        await ctx.send("❌ Du hast nicht genug Coins.")
+        return
+
+    coins[sender] -= amount
+    coins[receiver] = coins.get(receiver, 0) + amount
+    save_coins(coins)
+
+    await ctx.send(
+        f"💸 {ctx.author.mention} hat {member.mention} **{amount} Coins** gesendet."
+    )
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
