@@ -323,5 +323,40 @@ async def divorce(ctx):
     )
     await ctx.send(embed=embed)
 
+@bot.command()
+async def akte(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    ensure_akte(member)
+
+    uid = str(member.id)
+    warnings_count = len(warn_data.get(member.id, []))
+    jails = akten[uid]["jails"]
+
+    if warnings_count >= 3 or jails >= 3:
+        status = "🚨 Gefährlich"
+    elif warnings_count >= 1 or jails >= 1:
+        status = "⚠️ Auffällig"
+    else:
+        status = "✅ Unauffällig"
+
+    embed = discord.Embed(
+        title=f"📂 Akte: {member}",
+        color=discord.Color.dark_red()
+    )
+
+    embed.set_thumbnail(url=member.avatar.url)
+
+    embed.add_field(name="🆔 ID", value=member.id, inline=False)
+    embed.add_field(name="📅 Account erstellt", value=member.created_at.strftime("%d.%m.%Y"), inline=True)
+    embed.add_field(name="📥 Server beigetreten", value=member.joined_at.strftime("%d.%m.%Y"), inline=True)
+    embed.add_field(name="⚠️ Verwarnungen", value=warnings_count, inline=True)
+    embed.add_field(name="🔒 Jails", value=jails, inline=True)
+    embed.add_field(name="🧠 Status", value=status, inline=False)
+    embed.add_field(name="🕵️ Interne Notiz", value=akten[uid]["notiz"], inline=False)
+
+    embed.set_footer(text=f"Akte aufgerufen von {ctx.author}")
+
+    await ctx.send(embed=embed)
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
