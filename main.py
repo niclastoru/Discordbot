@@ -62,6 +62,40 @@ def ensure_akte(member):
             ])
         }
         save_akten(akten)
+
+class TicTacToe(View):
+    def __init__(self, p1, p2):
+        super().__init__(timeout=120)
+        self.board = ["⬜"] * 9
+        self.turn = p1
+        self.p1 = p1
+        self.p2 = p2
+
+        for i in range(9):
+            self.add_item(TTTButton(i, self))
+
+    def check_win(self, symbol):
+        wins = [
+            (0,1,2),(3,4,5),(6,7,8),
+            (0,3,6),(1,4,7),(2,5,8),
+            (0,4,8),(2,4,6)
+        ]
+        return any(all(self.board[i] == symbol for i in combo) for combo in wins)
+
+    def get_embed(self):
+        text = ""
+        for i in range(9):
+            text += self.board[i]
+            if i % 3 == 2:
+                text += "\n"
+
+        embed = Embed(
+            title="❌⭕ Tic Tac Toe",
+            description=text,
+            color=discord.Color.blurple()
+        )
+        embed.set_footer(text=f"Am Zug: {self.turn.display_name}")
+        return embed
 # ================== READY ==================
 @bot.event
 async def on_ready():
