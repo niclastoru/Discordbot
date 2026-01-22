@@ -5,6 +5,7 @@ import json
 import os
 from discord.ui import View, Button
 from discord import ButtonStyle, Embed
+print(discord.__version__)
 
 # ================== INTENTS ==================
 intents = discord.Intents.default()
