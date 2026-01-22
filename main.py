@@ -1,5 +1,4 @@
-import discord
-from discord.ext import commands
+  discord.ext import commands
 import random
 import os
 warn_data = {}
@@ -347,7 +346,7 @@ async def rank(ctx, member: discord.Member = None):
         f"📊 **{member.display_name}**\n"
         f"⭐ Level: **{level}**\n"
         f"✨ XP: **{xp}**"
-  @bot.event
+@bot.event
 async def on_message(message):
     if message.author.bot:
         return
