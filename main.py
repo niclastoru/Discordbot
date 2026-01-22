@@ -462,7 +462,7 @@ async def ttt(ctx, member: discord.Member):
         await ctx.send("❌ Ungültiger Spieler.")
         return
 
-    embed = Embed(
+    embed = discord.Embed(
         title="🎮 Tic Tac Toe – Anfrage",
         description=(
             f"{member.mention}\n\n"
@@ -472,12 +472,12 @@ async def ttt(ctx, member: discord.Member):
         color=discord.Color.green()
     )
 
-    class AcceptView(View):
+    class AcceptView(discord.ui.View):
         def __init__(self):
             super().__init__(timeout=60)
 
-        @Button(label="✅ Annehmen", style=ButtonStyle.success)
-        async def accept(self, interaction: discord.Interaction, button: Button):
+        @discord.ui.button(label="✅ Annehmen", style=discord.ButtonStyle.success)
+        async def accept(self, interaction: discord.Interaction, btn):
             if interaction.user != member:
                 await interaction.response.send_message(
                     "❌ Das ist nicht deine Anfrage!", ephemeral=True
@@ -490,7 +490,8 @@ async def ttt(ctx, member: discord.Member):
                 view=game
             )
 
-    view = AcceptView()
-    await ctx.send(embed=embed, view=view)
+    await ctx.send(embed=embed, view=AcceptView()
+            )
+    
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
