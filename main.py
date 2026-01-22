@@ -100,6 +100,9 @@ async def userinfo(ctx, member: discord.Member = None):
 @commands.has_permissions(moderate_members=True)
 async def jail(ctx, member: discord.Member, *, reason="Kein Grund"):
     role = discord.utils.get(ctx.guild.roles, name="jailed")
+    ensure_akte(member)
+akten[str(member.id)]["jails"] += 1
+save_akten(akten)
     if not role:
         await ctx.send("❌ Rolle **jailed** existiert nicht.")
         return
@@ -113,10 +116,6 @@ async def unjail(ctx, member: discord.Member):
     if role in member.roles:
         await member.remove_roles(role)
         await ctx.send(f"🔓 {member.mention} wurde entjailt")
-
-ensure_akte(member)
-akten[str(member.id)]["jails"] += 1
-save_akten(akten)
 
 # ================== WARN ==================
 @bot.command()
