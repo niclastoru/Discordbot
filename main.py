@@ -347,6 +347,8 @@ async def rank(ctx, member: discord.Member = None):
         f"📊 **{member.display_name}**\n"
         f"⭐ Level: **{level}**\n"
         f"✨ XP: **{xp}**"
+    )
+    
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -372,7 +374,7 @@ async def on_message(message):
 
     save_xp(xp_data)
     await bot.process_commands(message)
-    )
+    
 @bot.command()
 async def top(ctx):
     if not xp_data:
@@ -433,4 +435,4 @@ async def ar_remove(ctx, *, trigger: str):
     await ctx.send(f"🗑️ AutoResponder für **{trigger}** entfernt.")
     
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
-bot.run(os.environ["TOKEN"])ßßßßßß
+bot.run(os.environ["TOKEN"])
