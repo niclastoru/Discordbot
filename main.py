@@ -329,7 +329,25 @@ async def pay(ctx, member: discord.Member, amount: int):
     await ctx.send(
         f"💸 {ctx.author.mention} hat {member.mention} **{amount} Coins** gesendet."
     )
-@bot.event
+
+
+@bot.command()
+async def rank(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user_id = str(member.id)
+
+    if user_id not in xp_data:
+        await ctx.send("❌ Dieser User hat noch keine XP.")
+        return
+
+    level = xp_data[user_id]["level"]
+    xp = xp_data[user_id]["xp"]
+
+    await ctx.send(
+        f"📊 **{member.display_name}**\n"
+        f"⭐ Level: **{level}**\n"
+        f"✨ XP: **{xp}**"
+  @bot.event
 async def on_message(message):
     if message.author.bot:
         return
@@ -354,23 +372,6 @@ async def on_message(message):
 
     save_xp(xp_data)
     await bot.process_commands(message)
-
-@bot.command()
-async def rank(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    user_id = str(member.id)
-
-    if user_id not in xp_data:
-        await ctx.send("❌ Dieser User hat noch keine XP.")
-        return
-
-    level = xp_data[user_id]["level"]
-    xp = xp_data[user_id]["xp"]
-
-    await ctx.send(
-        f"📊 **{member.display_name}**\n"
-        f"⭐ Level: **{level}**\n"
-        f"✨ XP: **{xp}**"
     )
 @bot.command()
 async def top(ctx):
