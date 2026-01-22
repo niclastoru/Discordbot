@@ -114,6 +114,10 @@ async def unjail(ctx, member: discord.Member):
         await member.remove_roles(role)
         await ctx.send(f"🔓 {member.mention} wurde entjailt")
 
+ensure_akte(member)
+akten[str(member.id)]["jails"] += 1
+save_akten(akten)
+
 # ================== WARN ==================
 @bot.command()
 @commands.has_permissions(administrator=True)
