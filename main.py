@@ -455,5 +455,38 @@ async def akte(ctx, member: discord.Member = None):
 
     await ctx.send(embed=embed)
 
+@bot.command()
+async def ttt(ctx, member: discord.Member):
+    if member.bot or member == ctx.author:
+        await ctx.send("❌ Ungültiger Spieler.")
+        return
+
+    embed = Embed(
+        title="🎮 Tic Tac Toe – Anfrage",
+        description=(
+            f"{member.mention}\n\n"
+            f"**{ctx.author.display_name}** fordert dich zu Tic Tac Toe heraus!\n"
+            "Drücke **Annehmen**, um zu spielen."
+        ),
+        color=discord.Color.green()
+    )
+
+    class AcceptView(View):
+        @Button(label="✅ Annehmen", style=ButtonStyle.success)
+        async def accept(self, interaction: discord.Interaction, button: Button):
+            if interaction.user != member:
+                await interaction.response.send_message(
+                    "❌ Das ist nicht deine Anfrage!", ephemeral=True
+                )
+                return
+
+            game = TicTacToe(ctx.author, member)
+            await interaction.response.edit_message(
+                embed=game.get_embed(),
+                view=game
+            )
+
+    await ctx.send(embed=embed, view=AcceptView())
+    
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
