@@ -178,5 +178,118 @@ async def ar_list(ctx):
         return
     await ctx.send("\n".join(f"- {k}" for k in autoresponder))
 
+# ================== MARRY SYSTEM ==================
+marriages = {}  # user_id : partner_id
+
+@bot.command()
+async def marry(ctx, member: discord.Member):
+    if member.bot:
+        await ctx.send("🤖 Bots kann man nicht heiraten.")
+        return
+
+    if member == ctx.author:
+        await ctx.send("💀 Du kannst dich nicht selbst heiraten.")
+        return
+
+    if str(ctx.author.id) in marriages:
+        await ctx.send("❌ Du bist bereits verheiratet.")
+        return
+
+    if str(member.id) in marriages:
+        await ctx.send("❌ Diese Person ist bereits verheiratet.")
+        return
+
+    embed = discord.Embed(
+        title="💍 Heiratsantrag!",
+        description=(
+            f"{member.mention},\n\n"
+            f"💖 **{ctx.author.display_name}** möchte dich heiraten!\n\n"
+            "❤️ = Annehmen\n"
+            "❌ = Ablehnen"
+        ),
+        color=discord.Color.pink()
+    )
+    embed.set_footer(text="Du hast 60 Sekunden Zeit")
+
+    msg = await ctx.send(embed=embed)
+    await msg.add_reaction("❤️")
+    await msg.add_reaction("❌")
+
+    def check(reaction, user):
+        return (
+            user == member
+            and reaction.message.id == msg.id
+            and str(reaction.emoji) in ["❤️", "❌"]
+        )
+
+    try:
+        reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
+
+        if str(reaction.emoji) == "❤️":
+            marriages[str(ctx.author.id)] = str(member.id)
+            marriages[str(member.id)] = str(ctx.author.id)
+
+            success = discord.Embed(
+                title="💍 Hochzeit!",
+                description=f"🎉 {ctx.author.mention} und {member.mention} sind jetzt **verheiratet**!",
+                color=discord.Color.green()
+            )
+            await msg.edit(embed=success)
+
+        else:
+            denied = discord.Embed(
+                title="💔 Antrag abgelehnt",
+                description=f"{member.mention} hat den Antrag abgelehnt.",
+                color=discord.Color.red()
+            )
+            await msg.edit(embed=denied)
+
+    except:
+        timeout = discord.Embed(
+            title="⌛ Antrag abgelaufen",
+            description="Der Antrag wurde nicht rechtzeitig beantwortet.",
+            color=discord.Color.dark_grey()
+        )
+        await msg.edit(embed=timeout)
+
+
+@bot.command()
+async def marrystatus(ctx, member: discord.Member = None):
+    member = member or ctx.author
+
+    if str(member.id) not in marriages:
+        await ctx.send("💔 Diese Person ist nicht verheiratet.")
+        return
+
+    partner_id = marriages[str(member.id)]
+    partner = ctx.guild.get_member(int(partner_id))
+
+    embed = discord.Embed(
+        title="💞 Ehe-Status",
+        description=f"{member.mention} ist verheiratet mit {partner.mention}",
+        color=discord.Color.purple()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def divorce(ctx):
+    if str(ctx.author.id) not in marriages:
+        await ctx.send("❌ Du bist nicht verheiratet.")
+        return
+
+    partner_id = marriages[str(ctx.author.id)]
+    partner = ctx.guild.get_member(int(partner_id))
+
+    del marriages[str(ctx.author.id)]
+    del marriages[str(partner_id)]
+
+    embed = discord.Embed(
+        title="💔 Scheidung",
+        description=f"{ctx.author.mention} und {partner.mention} sind jetzt geschieden.",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed)
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
