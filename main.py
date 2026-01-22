@@ -45,6 +45,21 @@ def save_akten(data):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 akten = load_akten()
+
+def ensure_akte(member):
+    uid = str(member.id)
+    if uid not in akten:
+        akten[uid] = {
+            "jails": 0,
+            "notiz": random.choice([
+                "Unauffällig, aber beobachtet.",
+                "Verhält sich verdächtig.",
+                "Könnte Probleme machen.",
+                "Zu ruhig für seinen Ruf.",
+                "Bereits mehrfach aufgefallen."
+            ])
+        }
+        save_akten(akten)
 # ================== READY ==================
 @bot.event
 async def on_ready():
