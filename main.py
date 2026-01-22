@@ -392,6 +392,45 @@ async def top(ctx):
             text += f"{i}. {user.display_name} — Level {data['level']}\n"
 
     await ctx.send(f"🏆 **Top 10 Levels**\n{text}")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def ar_add(ctx, *, text: str):
+    if "|" not in text:
+        await ctx.send("❌ Nutzung: ,ar_add trigger | antwort")
+        return
+
+    trigger, response = map(str.strip, text.split("|", 1))
+    autoresponder[trigger.lower()] = response
+    save_autoresponder(autoresponder)
+
+    await ctx.send(f"✅ AutoResponder für **{trigger}** hinzugefügt.")
+
+@bot.command()
+async def ar_list(ctx):
+    if not autoresponder:
+        await ctx.send("❌ Keine AutoResponder vorhanden.")
+        return
+
+    text = "🤖 **AutoResponder Liste:**\n"
+    for trigger in autoresponder:
+        text += f"- `{trigger}`\n"
+
+    await ctx.send(text)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def ar_remove(ctx, *, trigger: str):
+    trigger = trigger.lower()
+
+    if trigger not in autoresponder:
+        await ctx.send("❌ Trigger nicht gefunden.")
+        return
+
+    del autoresponder[trigger]
+    save_autoresponder(autoresponder)
+
+    await ctx.send(f"🗑️ AutoResponder für **{trigger}** entfernt.")
     
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
 bot.run(os.environ["TOKEN"])
