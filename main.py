@@ -1,4 +1,5 @@
-  discord.ext import commands
+import discord
+from discord.ext import commands
 import random
 import os
 warn_data = {}
@@ -432,4 +433,4 @@ async def ar_remove(ctx, *, trigger: str):
     await ctx.send(f"🗑️ AutoResponder für **{trigger}** entfernt.")
     
 # ===== RUN BOT (IMMER GANZ UNTEN!) =====
-bot.run(os.environ["TOKEN"])
+bot.run(os.environ["TOKEN"])ßßßßßß
