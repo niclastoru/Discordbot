@@ -47,7 +47,20 @@ bot = commands.Bot(command_prefix=",", intents=intents)
 @bot.event
 async def on_ready():
     print(f"✅ Bot online als {bot.user}")
-
+async def ask_ai(prompt: str):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Du bist ein cooler, respektvoller Discord-Bot. Antworte locker und menschlich."
+            },
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200,
+        temperature=0.8
+    )
+    return response.choices[0].message.content
 # ===== BASIC COMMANDS =====
 @bot.command()
 async def ping(ctx):
