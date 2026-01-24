@@ -464,6 +464,37 @@ async def akte(ctx, member: discord.Member = None):
 
     await ctx.send(embed=embed)
 
+DISCORD_INVITE_REGEX = re.compile(
+    r"(https?:\/\/)?(www\.)?(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/\S+",
+    re.IGNORECASE
+)
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    # 🔒 Admins dürfen alles
+    if message.author.guild_permissions.administrator:
+        await bot.process_commands(message)
+        return
+
+    # 🚫 Discord-Invite erkennen
+    if DISCORD_INVITE_REGEX.search(message.content):
+        try:
+            await message.delete()
+        except:
+            pass
+
+        await message.channel.send(
+            f"🚫 {message.author.mention} **Discord-Server-Links sind hier verboten!**",
+            delete_after=5
+        )
+        return
+
+    # ✅ andere Features weiterlaufen lassen
+    await bot.process_commands(message)
+    
 @bot.command()
 async def ttt(ctx, member: discord.Member):
     if member.bot or member == ctx.author:
