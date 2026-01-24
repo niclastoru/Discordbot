@@ -6,7 +6,7 @@ import os
 from discord.ui import View, button
 from discord import ButtonStyle, Embed
 print(discord.__version__)
-
+import re
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
