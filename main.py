@@ -282,5 +282,14 @@ async def ar_add(ctx, *, text):
 
     await ctx.send(f"✅ AutoResponder gespeichert für `{trigger}`")
 
+@bot.command()
+async def ar_list(ctx):
+    if not autoresponder:
+        await ctx.send("❌ Keine AutoResponder vorhanden")
+        return
+
+    text = "\n".join(f"- `{k}`" for k in autoresponder.keys())
+    await ctx.send(f"🤖 **AutoResponder:**\n{text}")
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
