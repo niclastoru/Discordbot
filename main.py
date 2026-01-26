@@ -1,159 +1,71 @@
+# ================== IMPORTS ==================
 import discord
 from discord.ext import commands
-import random
-import json
-import os
-from discord.ui import View, button
-from discord import ButtonStyle, Embed
-print(discord.__version__)
-import re
+from discord.ui import View, Button
+from discord import ButtonStyle
+import random, json, os, re
+
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-
 bot = commands.Bot(command_prefix=",", intents=intents)
 
-# ================== FILES ==================
-XP_FILE = "xp.json"
-COIN_FILE = "coins.json"
-AUTORESPONDER_FILE = "autoresponder.json"
-
-# ================== LOAD / SAVE ==================
-def load_json(file):
+# ================== FILE UTILS ==================
+def load(file, default):
     if not os.path.exists(file):
-        return {}
+        return default
     with open(file, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def save_json(file, data):
+def save(file, data):
     with open(file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-xp_data = load_json(XP_FILE)
-coins = load_json(COIN_FILE)
-autoresponder = load_json(AUTORESPONDER_FILE)
-warn_data = {}
+xp = load("xp.json", {})
+coins = load("coins.json", {})
+warnings = load("warnings.json", {})
+akten = load("akten.json", {})
+marriages = load("marriages.json", {})
+autoresponder = load("autoresponder.json", {})
 
-AKTE_FILE = "akte.json"
-
-def load_akten():
-    if not os.path.exists(AKTE_FILE):
-        return {}
-    with open(AKTE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_akten(data):
-    with open(AKTE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-akten = load_akten()
-
-def ensure_akte(member):
-    uid = str(member.id)
-    if uid not in akten:
-        akten[uid] = {
-            "jails": 0,
-            "notiz": random.choice([
-                "Unauffällig, aber beobachtet.",
-                "Verhält sich verdächtig.",
-                "Könnte Probleme machen.",
-                "Zu ruhig für seinen Ruf.",
-                "Bereits mehrfach aufgefallen."
-            ])
-        }
-        save_akten(akten)
-
-class TicTacToe(View):
-    def __init__(self, p1, p2):
-        super().__init__(timeout=120)
-        self.board = ["⬜"] * 9
-        self.turn = p1
-        self.p1 = p1
-        self.p2 = p2
-
-        for i in range(9):
-            self.add_item(TTTButton(i, self))
-
-    def check_win(self, symbol):
-        wins = [
-            (0,1,2),(3,4,5),(6,7,8),
-            (0,3,6),(1,4,7),(2,5,8),
-            (0,4,8),(2,4,6)
-        ]
-        return any(all(self.board[i] == symbol for i in combo) for combo in wins)
-
-    def get_embed(self):
-        text = ""
-        for i in range(9):
-            text += self.board[i]
-            if i % 3 == 2:
-                text += "\n"
-
-        embed = Embed(
-            title="❌⭕ Tic Tac Toe",
-            description=text,
-            color=discord.Color.blurple()
-        )
-        embed.set_footer(text=f"Am Zug: {self.turn.display_name}")
-        return embed
-
-class TTTButton(discord.ui.Button):
-    def __init__(self, index, game):
-        super().__init__(
-            style=discord.ButtonStyle.secondary,
-            label=" ",
-            row=index // 3
-        )
-        self.index = index
-        self.game = game
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user != self.game.turn:
-            await interaction.response.send_message(
-                "❌ Du bist nicht dran!", ephemeral=True
-            )
-            return
-
-        if self.game.board[self.index] != "⬜":
-            await interaction.response.send_message(
-                "❌ Feld ist schon belegt!", ephemeral=True
-            )
-            return
-
-        symbol = "❌" if self.game.turn == self.game.p1 else "⭕"
-        self.game.board[self.index] = symbol
-        self.label = symbol
-        self.disabled = True
-
-        if self.game.check_win(symbol):
-            for item in self.game.children:
-                item.disabled = True
-
-            embed = self.game.get_embed()
-            embed.title = "🎉 Spiel beendet!"
-            embed.description += f"\n\n🏆 **{interaction.user.mention} hat gewonnen!**"
-            await interaction.response.edit_message(embed=embed, view=self.game)
-            return
-
-        if "⬜" not in self.game.board:
-            embed = self.game.get_embed()
-            embed.title = "🤝 Unentschieden!"
-            await interaction.response.edit_message(embed=embed, view=self.game)
-            return
-
-        self.game.turn = (
-            self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
-        )
-        await interaction.response.edit_message(
-            embed=self.game.get_embed(),
-            view=self.game
-        )
-        
 # ================== READY ==================
 @bot.event
 async def on_ready():
-    print(f"✅ Bot online als {bot.user}")
+    print(f"✅ Online als {bot.user}")
+
+# ================== LINK BLOCK ==================
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    if re.search(r"(discord\.gg/|discord\.com/invite)", message.content.lower()):
+        if not message.author.guild_permissions.administrator:
+            await message.delete()
+            await message.channel.send(
+                f"❌ {message.author.mention} Discord-Server-Links sind verboten!",
+                delete_after=5
+            )
+            return
+
+    uid = str(message.author.id)
+    xp.setdefault(uid, {"xp": 0, "level": 1})
+    xp[uid]["xp"] += 5
+
+    if xp[uid]["xp"] >= xp[uid]["level"] * 100:
+        xp[uid]["xp"] = 0
+        xp[uid]["level"] += 1
+        await message.channel.send(
+            f"🎉 {message.author.mention} ist jetzt Level **{xp[uid]['level']}**"
+        )
+
+    save("xp.json", xp)
+
+    if message.content.lower() in autoresponder:
+        await message.channel.send(autoresponder[message.content.lower()])
+
+    await bot.process_commands(message)
 
 # ================== BASIC ==================
 @bot.command()
@@ -164,373 +76,184 @@ async def ping(ctx):
 async def ship(ctx, member: discord.Member):
     await ctx.send(f"💖 {ctx.author.display_name} × {member.display_name} = **{random.randint(0,100)}%**")
 
-# ================== AVATAR ==================
+# ================== USER ==================
 @bot.command()
 async def avatar(ctx, member: discord.Member = None):
     member = member or ctx.author
-    embed = discord.Embed(title=f"Avatar von {member}", color=discord.Color.blue())
-    embed.set_image(url=member.display_avatar.url)
-    await ctx.send(embed=embed)
+    e = discord.Embed(title=f"Avatar von {member}")
+    e.set_image(url=member.display_avatar.url)
+    await ctx.send(embed=e)
 
-# ================== USERINFO ==================
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user = await bot.fetch_user(member.id)
+    if not user.banner:
+        await ctx.send("❌ Kein Banner vorhanden.")
+        return
+    e = discord.Embed(title=f"Banner von {member}")
+    e.set_image(url=user.banner.url)
+    await ctx.send(embed=e)
+
 @bot.command()
 async def userinfo(ctx, member: discord.Member = None):
     member = member or ctx.author
-    embed = discord.Embed(title=f"Userinfo – {member}", color=discord.Color.blurple())
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="ID", value=member.id)
-    embed.add_field(name="Account erstellt", value=member.created_at.strftime("%d.%m.%Y"))
-    embed.add_field(name="Server beigetreten", value=member.joined_at.strftime("%d.%m.%Y"))
-    roles = ", ".join(r.name for r in member.roles[1:]) or "Keine"
-    embed.add_field(name="Rollen", value=roles, inline=False)
-    await ctx.send(embed=embed)
+    e = discord.Embed(title=f"Userinfo – {member}")
+    e.set_thumbnail(url=member.display_avatar.url)
+    e.add_field(name="ID", value=member.id)
+    e.add_field(name="Account", value=member.created_at.strftime("%d.%m.%Y"))
+    e.add_field(name="Server Join", value=member.joined_at.strftime("%d.%m.%Y"))
+    roles = ", ".join(r.mention for r in member.roles[1:]) or "Keine"
+    e.add_field(name="Rollen", value=roles, inline=False)
+    await ctx.send(embed=e)
 
-# ================== JAIL ==================
+# ================== SERVER ==================
 @bot.command()
-@commands.has_permissions(moderate_members=True)
-async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
-    ensure_akte(member)
-
-    role = discord.utils.get(ctx.guild.roles, name="jailed")
-    if not role:
-        await ctx.send("❌ Die Rolle **jailed** existiert nicht.")
-        return
-
-    # alte Jail-Rollen entfernen
-    for r in member.roles:
-        if r.name.lower().startswith("jail"):
-            await member.remove_roles(r)
-
-    await member.add_roles(role)
-
-    # 📁 Akte aktualisieren
-    akten[str(member.id)]["jails"].append({
-        "mod": ctx.author.name,
-        "reason": reason
-    })
-    save_akten(akten)
-
-    await ctx.send(
-        f"🔒 {member.mention} wurde gejailt.\n"
-        f"📝 Grund: **{reason}**\n"
-        f"📁 Akte aktualisiert."
-    )
-    
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def unjail(ctx, member: discord.Member):
-    role = discord.utils.get(ctx.guild.roles, name="jailed")
-    if role in member.roles:
-        await member.remove_roles(role)
-        await ctx.send(f"🔓 {member.mention} wurde entjailt")
-
-# ================== WARN ==================
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def warn(ctx, member: discord.Member, *, reason="Kein Grund"):
-    warn_data.setdefault(str(member.id), []).append(reason)
-    await ctx.send(f"⚠️ {member.mention} verwarnt | **{reason}**")
-    try:
-        await member.send(f"⚠️ Du wurdest auf **{ctx.guild.name}** verwarnt\nGrund: {reason}")
-    except:
-        pass
-
-@bot.command()
-async def warnings(ctx, member: discord.Member):
-    warns = warn_data.get(str(member.id), [])
-    if not warns:
-        await ctx.send("✅ Keine Verwarnungen")
-        return
-    text = "\n".join(f"{i+1}. {w}" for i, w in enumerate(warns))
-    await ctx.send(f"⚠️ Verwarnungen:\n{text}")
+async def serverinfo(ctx):
+    g = ctx.guild
+    e = discord.Embed(title=g.name)
+    e.set_thumbnail(url=g.icon.url if g.icon else None)
+    e.add_field(name="Owner", value=g.owner)
+    e.add_field(name="Mitglieder", value=g.member_count)
+    e.add_field(name="Boosts", value=g.premium_subscription_count)
+    await ctx.send(embed=e)
 
 # ================== ECONOMY ==================
 @bot.command()
 async def bal(ctx, member: discord.Member = None):
     member = member or ctx.author
-    await ctx.send(f"💰 {member.display_name}: **{coins.get(str(member.id),0)} Coins**")
+    await ctx.send(f"💰 {member.display_name}: {coins.get(str(member.id),0)} Coins")
 
 @bot.command()
 async def daily(ctx):
-    coins[str(ctx.author.id)] = coins.get(str(ctx.author.id),0) + 100
-    save_json(COIN_FILE, coins)
-    await ctx.send("🎁 Du hast **100 Coins** bekommen!")
+    uid = str(ctx.author.id)
+    coins[uid] = coins.get(uid, 0) + 100
+    save("coins.json", coins)
+    await ctx.send("🎁 +100 Coins")
 
-# ================== XP / LEVEL ==================
-@bot.event
-async def on_message(message):
-    if message.author.bot:
+@bot.command()
+async def pay(ctx, member: discord.Member, amount: int):
+    uid = str(ctx.author.id)
+    tid = str(member.id)
+    if coins.get(uid,0) < amount:
+        await ctx.send("❌ Zu wenig Coins")
         return
+    coins[uid] -= amount
+    coins[tid] = coins.get(tid,0) + amount
+    save("coins.json", coins)
+    await ctx.send("💸 Gesendet!")
 
-    uid = str(message.author.id)
-    xp_data.setdefault(uid, {"xp":0,"level":1})
-    xp_data[uid]["xp"] += 5
-
-    need = xp_data[uid]["level"] * 100
-    if xp_data[uid]["xp"] >= need:
-        xp_data[uid]["xp"] = 0
-        xp_data[uid]["level"] += 1
-        await message.channel.send(f"🎉 {message.author.mention} ist jetzt Level **{xp_data[uid]['level']}**")
-
-    save_json(XP_FILE, xp_data)
-
-    # autoresponder
-    msg = message.content.lower()
-    if msg in autoresponder:
-        await message.channel.send(autoresponder[msg])
-
-    await bot.process_commands(message)
-
+# ================== RANK ==================
 @bot.command()
 async def rank(ctx, member: discord.Member = None):
     member = member or ctx.author
-    data = xp_data.get(str(member.id))
-    if not data:
-        await ctx.send("❌ Keine XP")
-        return
-    await ctx.send(f"⭐ {member.display_name} | Level {data['level']} | XP {data['xp']}")
+    data = xp.get(str(member.id))
+    await ctx.send(f"⭐ Level {data['level']} | XP {data['xp']}")
 
 @bot.command()
 async def top(ctx):
-    sorted_users = sorted(xp_data.items(), key=lambda x:(x[1]["level"],x[1]["xp"]), reverse=True)
-    text = ""
-    for i,(uid,data) in enumerate(sorted_users[:10],1):
-        user = ctx.guild.get_member(int(uid))
-        if user:
-            text += f"{i}. {user.display_name} – Level {data['level']}\n"
-    await ctx.send(f"🏆 **Top 10**\n{text}")
+    s = sorted(xp.items(), key=lambda x:(x[1]["level"],x[1]["xp"]), reverse=True)
+    msg = ""
+    for i,(uid,d) in enumerate(s[:10],1):
+        u = ctx.guild.get_member(int(uid))
+        if u:
+            msg += f"{i}. {u.display_name} – L{d['level']}\n"
+    await ctx.send(msg)
 
-# ================== AUTORESPONDER ==================
+# ================== WARN / JAIL / AKTE ==================
 @bot.command()
-@commands.has_permissions(administrator=True)
-async def ar_add(ctx, *, text):
-    trigger, response = map(str.strip, text.split("|",1))
-    autoresponder[trigger.lower()] = response
-    save_json(AUTORESPONDER_FILE, autoresponder)
-    await ctx.send("✅ AutoResponder hinzugefügt")
-
-@bot.command()
-async def ar_list(ctx):
-    if not autoresponder:
-        await ctx.send("❌ Keine AutoResponder")
-        return
-    await ctx.send("\n".join(f"- {k}" for k in autoresponder))
-
-# ================== MARRY SYSTEM ==================
-marriages = {}  # user_id : partner_id
+@commands.has_permissions(moderate_members=True)
+async def warn(ctx, member: discord.Member, *, reason="Kein Grund"):
+    warnings.setdefault(str(member.id), []).append(reason)
+    save("warnings.json", warnings)
+    await ctx.send("⚠️ Verwarnt")
 
 @bot.command()
-async def marry(ctx, member: discord.Member):
-    if member.bot:
-        await ctx.send("🤖 Bots kann man nicht heiraten.")
+@commands.has_permissions(moderate_members=True)
+async def jail(ctx, member: discord.Member, *, reason="Kein Grund"):
+    role = discord.utils.get(ctx.guild.roles, name="jailed")
+    if not role:
+        await ctx.send("❌ Rolle jailed fehlt")
         return
-
-    if member == ctx.author:
-        await ctx.send("💀 Du kannst dich nicht selbst heiraten.")
-        return
-
-    if str(ctx.author.id) in marriages:
-        await ctx.send("❌ Du bist bereits verheiratet.")
-        return
-
-    if str(member.id) in marriages:
-        await ctx.send("❌ Diese Person ist bereits verheiratet.")
-        return
-
-    embed = discord.Embed(
-        title="💍 Heiratsantrag!",
-        description=(
-            f"{member.mention},\n\n"
-            f"💖 **{ctx.author.display_name}** möchte dich heiraten!\n\n"
-            "❤️ = Annehmen\n"
-            "❌ = Ablehnen"
-        ),
-        color=discord.Color.pink()
-    )
-    embed.set_footer(text="Du hast 60 Sekunden Zeit")
-
-    msg = await ctx.send(embed=embed)
-    await msg.add_reaction("❤️")
-    await msg.add_reaction("❌")
-
-    def check(reaction, user):
-        return (
-            user == member
-            and reaction.message.id == msg.id
-            and str(reaction.emoji) in ["❤️", "❌"]
-        )
-
-    try:
-        reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
-
-        if str(reaction.emoji) == "❤️":
-            marriages[str(ctx.author.id)] = str(member.id)
-            marriages[str(member.id)] = str(ctx.author.id)
-
-            success = discord.Embed(
-                title="💍 Hochzeit!",
-                description=f"🎉 {ctx.author.mention} und {member.mention} sind jetzt **verheiratet**!",
-                color=discord.Color.green()
-            )
-            await msg.edit(embed=success)
-
-        else:
-            denied = discord.Embed(
-                title="💔 Antrag abgelehnt",
-                description=f"{member.mention} hat den Antrag abgelehnt.",
-                color=discord.Color.red()
-            )
-            await msg.edit(embed=denied)
-
-    except:
-        timeout = discord.Embed(
-            title="⌛ Antrag abgelaufen",
-            description="Der Antrag wurde nicht rechtzeitig beantwortet.",
-            color=discord.Color.dark_grey()
-        )
-        await msg.edit(embed=timeout)
-
+    await member.add_roles(role)
+    akten.setdefault(str(member.id), {"jails":0})
+    akten[str(member.id)]["jails"] += 1
+    save("akten.json", akten)
+    await ctx.send("🔒 Gejailt")
 
 @bot.command()
-async def marrystatus(ctx, member: discord.Member = None):
-    member = member or ctx.author
-
-    if str(member.id) not in marriages:
-        await ctx.send("💔 Diese Person ist nicht verheiratet.")
-        return
-
-    partner_id = marriages[str(member.id)]
-    partner = ctx.guild.get_member(int(partner_id))
-
-    embed = discord.Embed(
-        title="💞 Ehe-Status",
-        description=f"{member.mention} ist verheiratet mit {partner.mention}",
-        color=discord.Color.purple()
-    )
-    await ctx.send(embed=embed)
-
-
-@bot.command()
-async def divorce(ctx):
-    if str(ctx.author.id) not in marriages:
-        await ctx.send("❌ Du bist nicht verheiratet.")
-        return
-
-    partner_id = marriages[str(ctx.author.id)]
-    partner = ctx.guild.get_member(int(partner_id))
-
-    del marriages[str(ctx.author.id)]
-    del marriages[str(partner_id)]
-
-    embed = discord.Embed(
-        title="💔 Scheidung",
-        description=f"{ctx.author.mention} und {partner.mention} sind jetzt geschieden.",
-        color=discord.Color.red()
-    )
-    await ctx.send(embed=embed)
+@commands.has_permissions(moderate_members=True)
+async def unjail(ctx, member: discord.Member):
+    role = discord.utils.get(ctx.guild.roles, name="jailed")
+    await member.remove_roles(role)
+    await ctx.send("🔓 Entjailt")
 
 @bot.command()
 async def akte(ctx, member: discord.Member = None):
     member = member or ctx.author
-    ensure_akte(member)
+    j = akten.get(str(member.id), {}).get("jails",0)
+    w = len(warnings.get(str(member.id),[]))
+    await ctx.send(f"📂 Akte\nJails: {j}\nWarns: {w}")
 
-    uid = str(member.id)
-    warnings_count = len(warn_data.get(member.id, []))
-    jails = akten[uid]["jails"]
-
-    if warnings_count >= 3 or jails >= 3:
-        status = "🚨 Gefährlich"
-    elif warnings_count >= 1 or jails >= 1:
-        status = "⚠️ Auffällig"
-    else:
-        status = "✅ Unauffällig"
-
-    embed = discord.Embed(
-        title=f"📂 Akte: {member}",
-        color=discord.Color.dark_red()
-    )
-
-    embed.set_thumbnail(url=member.avatar.url)
-
-    embed.add_field(name="🆔 ID", value=member.id, inline=False)
-    embed.add_field(name="📅 Account erstellt", value=member.created_at.strftime("%d.%m.%Y"), inline=True)
-    embed.add_field(name="📥 Server beigetreten", value=member.joined_at.strftime("%d.%m.%Y"), inline=True)
-    embed.add_field(name="⚠️ Verwarnungen", value=warnings_count, inline=True)
-    embed.add_field(name="🔒 Jails", value=jails, inline=True)
-    embed.add_field(name="🧠 Status", value=status, inline=False)
-    embed.add_field(name="🕵️ Interne Notiz", value=akten[uid]["notiz"], inline=False)
-
-    embed.set_footer(text=f"Akte aufgerufen von {ctx.author}")
-
-    await ctx.send(embed=embed)
-
-DISCORD_INVITE_REGEX = re.compile(
-    r"(https?:\/\/)?(www\.)?(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/\S+",
-    re.IGNORECASE
-)
-
-@bot.event
-async def on_message(message):
-    if message.author.bot:
+# ================== MARRY ==================
+@bot.command()
+async def marry(ctx, member: discord.Member):
+    if str(ctx.author.id) in marriages:
+        await ctx.send("❌ Schon verheiratet")
         return
+    marriages[str(ctx.author.id)] = str(member.id)
+    marriages[str(member.id)] = str(ctx.author.id)
+    save("marriages.json", marriages)
+    await ctx.send("💍 Verheiratet!")
 
-    # 🔒 Admins dürfen alles
-    if message.author.guild_permissions.administrator:
-        await bot.process_commands(message)
+@bot.command()
+async def marrystatus(ctx):
+    uid = str(ctx.author.id)
+    if uid not in marriages:
+        await ctx.send("💔 Nicht verheiratet")
         return
+    partner = ctx.guild.get_member(int(marriages[uid]))
+    await ctx.send(f"💞 Verheiratet mit {partner.mention}")
 
-    # 🚫 Discord-Invite erkennen
-    if DISCORD_INVITE_REGEX.search(message.content):
-        try:
-            await message.delete()
-        except:
-            pass
-
-        await message.channel.send(
-            f"🚫 {message.author.mention} **Discord-Server-Links sind hier verboten!**",
-            delete_after=5
-        )
+@bot.command()
+async def divorce(ctx):
+    uid = str(ctx.author.id)
+    pid = marriages.get(uid)
+    if not pid:
         return
+    del marriages[uid]
+    del marriages[pid]
+    save("marriages.json", marriages)
+    await ctx.send("💔 Geschieden")
 
-    # ✅ andere Features weiterlaufen lassen
-    await bot.process_commands(message)
-    
+# ================== TTT ==================
+class TTT(View):
+    def __init__(self, p1, p2):
+        super().__init__(timeout=120)
+        self.board = ["⬜"]*9
+        self.turn = p1
+        self.p1, self.p2 = p1, p2
+        for i in range(9):
+            self.add_item(TTTBtn(i, self))
+
+class TTTBtn(Button):
+    def __init__(self, i, game):
+        super().__init__(label=" ", style=ButtonStyle.secondary, row=i//3)
+        self.i, self.game = i, game
+
+    async def callback(self, i):
+        if i.user != self.game.turn:
+            return
+        sym = "❌" if self.game.turn == self.game.p1 else "⭕"
+        self.label = sym
+        self.disabled = True
+        self.game.board[self.i] = sym
+        self.game.turn = self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
+        await i.response.edit_message(view=self.game)
+
 @bot.command()
 async def ttt(ctx, member: discord.Member):
-    if member.bot or member == ctx.author:
-        await ctx.send("❌ Ungültiger Spieler.")
-        return
+    await ctx.send("🎮 TicTacToe", view=TTT(ctx.author, member))
 
-    embed = discord.Embed(
-        title="🎮 Tic Tac Toe – Anfrage",
-        description=(
-            f"{member.mention}\n\n"
-            f"**{ctx.author.display_name}** fordert dich zu Tic Tac Toe heraus!\n"
-            "Drücke **Annehmen**, um zu spielen."
-        ),
-        color=discord.Color.green()
-    )
-
-    class AcceptView(discord.ui.View):
-        def __init__(self):
-            super().__init__(timeout=60)
-
-        @discord.ui.button(label="✅ Annehmen", style=discord.ButtonStyle.success)
-        async def accept(self, interaction: discord.Interaction, btn):
-            if interaction.user != member:
-                await interaction.response.send_message(
-                    "❌ Das ist nicht deine Anfrage!", ephemeral=True
-                )
-                return
-
-            game = TicTacToe(ctx.author, member)
-            await interaction.response.edit_message(
-                embed=game.get_embed(),
-                view=game
-            )
-
-    await ctx.send(embed=embed, view=AcceptView()
-            )
-    
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
