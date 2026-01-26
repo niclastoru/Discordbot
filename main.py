@@ -291,5 +291,19 @@ async def ar_list(ctx):
     text = "\n".join(f"- `{k}`" for k in autoresponder.keys())
     await ctx.send(f"🤖 **AutoResponder:**\n{text}")
 
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def ar_remove(ctx, *, trigger):
+    trigger = trigger.lower()
+
+    if trigger not in autoresponder:
+        await ctx.send("❌ Trigger nicht gefunden")
+        return
+
+    del autoresponder[trigger]
+    save_autoresponder(autoresponder)
+
+    await ctx.send(f"🗑️ `{trigger}` gelöscht")
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
