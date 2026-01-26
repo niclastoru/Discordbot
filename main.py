@@ -269,5 +269,18 @@ class TTTBtn(Button):
 async def ttt(ctx, member: discord.Member):
     await ctx.send("🎮 TicTacToe", view=TTT(ctx.author, member))
 
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def ar_add(ctx, *, text):
+    if "|" not in text:
+        await ctx.send("❌ Nutzung: ,ar_add trigger | antwort")
+        return
+
+    trigger, response = map(str.strip, text.split("|", 1))
+    autoresponder[trigger.lower()] = response
+    save_autoresponder(autoresponder)
+
+    await ctx.send(f"✅ AutoResponder gespeichert für `{trigger}`")
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
