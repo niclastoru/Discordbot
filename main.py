@@ -93,6 +93,28 @@ async def on_message(message):
     if message.content.lower() in autoresponder:
         await message.channel.send(autoresponder[message.content.lower()])
 
+        if message.author.bot:
+        return
+
+    uid = str(message.author.id)
+
+    # 🟢 AFK entfernen, wenn User schreibt
+    if uid in afk_users:
+        del afk_users[uid]
+        save_afk(afk_users)
+        await message.channel.send(
+            f"👋 Willkommen zurück {message.author.mention}, AFK entfernt."
+        )
+
+    # 🔔 AFK Hinweis bei Erwähnung
+    for user in message.mentions:
+        u_id = str(user.id)
+        if u_id in afk_users:
+            reason = afk_users[u_id]["reason"]
+            await message.channel.send(
+                f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{reason}**"
+            )
+
     await bot.process_commands(message)
 
 # ================== BASIC ==================
