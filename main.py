@@ -262,6 +262,7 @@ async def unjail(ctx, member: discord.Member):
     role = discord.utils.get(ctx.guild.roles, name="jailed")
     await member.remove_roles(role)
     await ctx.send("🔓 Entjailt")
+    add_history(member, "UNJAIL", ctx.author)
 
 @bot.command()
 async def akte(ctx, member: discord.Member = None):
