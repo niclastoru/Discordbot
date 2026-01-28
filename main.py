@@ -254,6 +254,7 @@ async def jail(ctx, member: discord.Member, *, reason="Kein Grund"):
     akten[str(member.id)]["jails"] += 1
     save("akten.json", akten)
     await ctx.send("🔒 Gejailt")
+add_history(member, "JAIL", ctx.author, reason)
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
