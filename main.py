@@ -241,6 +241,8 @@ async def warn(ctx, member: discord.Member, *, reason="Kein Grund"):
     warnings.setdefault(str(member.id), []).append(reason)
     save("warnings.json", warnings)
     await ctx.send("⚠️ Verwarnt")
+    add_history(member, "WARN", ctx.author, reason)
+    
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
