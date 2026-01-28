@@ -94,7 +94,7 @@ async def on_message(message):
         await message.channel.send(autoresponder[message.content.lower()])
 
         if message.author.bot:
-        return
+            return
 
     uid = str(message.author.id)
 
