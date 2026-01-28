@@ -319,5 +319,22 @@ async def ar_remove(ctx, *, trigger):
 
     await ctx.send(f"🗑️ `{trigger}` gelöscht")
 
+@bot.command()
+async def afk(ctx, *, reason="AFK"):
+    uid = str(ctx.author.id)
+
+    afk_users[uid] = {
+        "reason": reason,
+        "time": int(discord.utils.utcnow().timestamp())
+    }
+    save_afk(afk_users)
+
+    embed = discord.Embed(
+        title="💤 AFK aktiviert",
+        description=f"**Grund:** {reason}",
+        color=discord.Color.orange()
+    )
+    await ctx.send(embed=embed)
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
