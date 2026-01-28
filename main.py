@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord.ui import View, Button
 from discord import ButtonStyle
 import random, json, os, re
+import datetime
 
 AUTORESPONDER_FILE = "autoresponder.json"
 
