@@ -405,5 +405,110 @@ async def rules(ctx):
 
     await ctx.send(embed=embed)
 
+# ================= FUN COMMANDS =================
+
+@bot.command()
+async def dice(ctx):
+    n = random.randint(1,6)
+    embed = discord.Embed(
+        title="🎲 Würfel",
+        description=f"Du hast eine **{n}** gewürfelt!",
+        color=discord.Color.orange()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def meme(ctx):
+    memes = [
+        "Ich nach 1 Commit: Senior Developer",
+        "Code läuft → nicht anfassen",
+        "Bug? Feature.",
+        "Ich teste nur kurz — alles kaputt",
+        "Deploy am Freitag = Mut"
+    ]
+    embed = discord.Embed(
+        title="😂 Meme",
+        description=random.choice(memes),
+        color=discord.Color.random()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def roast(ctx, member: discord.Member):
+    roasts = [
+        "läuft bei dir wie Windows 95",
+        "du bist kein Bug — du bist ein ganzes Update",
+        "dein WLAN hat mehr Persönlichkeit",
+        "sogar mein Bot hat mehr XP",
+        "CPU auf Sparmodus bei dir"
+    ]
+    embed = discord.Embed(
+        title="🔥 Roast",
+        description=f"{member.mention} — {random.choice(roasts)}",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def kiss(ctx, member: discord.Member):
+    embed = discord.Embed(
+        title="💋 Kiss",
+        description=f"{ctx.author.mention} küsst {member.mention}",
+        color=discord.Color.pink()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def fight(ctx, member: discord.Member):
+    winner = random.choice([ctx.author, member])
+    embed = discord.Embed(
+        title="🥊 Fight",
+        description=f"{ctx.author.mention} vs {member.mention}\n\n🏆 Gewinner: {winner.mention}",
+        color=discord.Color.dark_red()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def ball(ctx, *, frage):
+    answers = [
+        "Ja", "Nein", "Safe", "Unwahrscheinlich",
+        "Frag später", "Definitiv", "Nope",
+        "Sieht gut aus", "Keine Chance"
+    ]
+    embed = discord.Embed(
+        title="🔮 8Ball",
+        description=f"Frage: {frage}\nAntwort: **{random.choice(answers)}**",
+        color=discord.Color.purple()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def steal(ctx, member: discord.Member):
+    if member.bot:
+        return await ctx.send("❌ Von Bots klauen ist cringe")
+
+    gain = random.randint(10,100)
+    success = random.choice([True, False])
+
+    if success:
+        coins[str(ctx.author.id)] = coins.get(str(ctx.author.id),0) + gain
+        coins[str(member.id)] = max(0, coins.get(str(member.id),0) - gain)
+        save_json(COIN_FILE, coins)
+
+        text = f"💸 Erfolgreich {gain} Coins von {member.mention} geklaut!"
+        color = discord.Color.green()
+    else:
+        text = "🚨 Erwischt! Kein Coin bekommen."
+        color = discord.Color.red()
+
+    embed = discord.Embed(title="🕵️ Diebstahl", description=text, color=color)
+    await ctx.send(embed=embed)
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
