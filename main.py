@@ -526,5 +526,36 @@ async def move(ctx, link):
     )
 
     await ctx.send("@everyone", embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def move_dm(ctx, link):
+    embed = discord.Embed(
+        title="🚀 Server Umzug",
+        description=(
+            f"Dieser Server zieht um.\n\n"
+            f"👉 Neuer Server: {link}\n\n"
+            "Du bist eingeladen zu joinen!"
+        ),
+        color=discord.Color.gold()
+    )
+
+    sent = 0
+    failed = 0
+
+    msg = await ctx.send("📨 Starte DM Versand...")
+
+    for member in ctx.guild.members:
+        if member.bot:
+            continue
+        try:
+            await member.send(embed=embed)
+            sent += 1
+        except:
+            failed += 1
+
+    await msg.edit(
+        content=f"✅ Fertig.\nGesendet: {sent}\nFehlgeschlagen: {failed}"
+    )
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
