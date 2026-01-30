@@ -361,5 +361,49 @@ async def afk(ctx, *, reason="AFK"):
     )
     await ctx.send(embed=embed)
 
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def rules(ctx):
+    embed = discord.Embed(
+        title=f"📜 {ctx.guild.name} Regelwerk",
+        description="Bitte lies dir die Regeln sorgfältig durch.",
+        color=discord.Color.dark_blue()
+    )
+
+    # ✅ Server Banner oben (wenn vorhanden)
+    if ctx.guild.banner:
+        embed.set_image(url=ctx.guild.banner.url)
+
+    # ✅ Server Icon als Thumbnail
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+
+    embed.add_field(
+        name="🚫 Verboten",
+        value=(
+            "• kein leaking\n"
+            "• kein doxxing\n"
+            "• keine Werbung\n"
+            "• kein spammen"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚖️ Allgemein",
+        value="Respektvoller Umgang. Admin/Mod Anweisungen sind zu befolgen.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="📘 Discord ToS",
+        value="https://discord.com/terms",
+        inline=False
+    )
+
+    embed.set_footer(text=f"Regelwerk • {ctx.guild.name}")
+
+    await ctx.send(embed=embed)
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
