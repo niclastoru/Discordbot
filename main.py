@@ -510,5 +510,21 @@ async def steal(ctx, member: discord.Member):
     embed = discord.Embed(title="🕵️ Diebstahl", description=text, color=color)
     await ctx.send(embed=embed)
 
+# ================== SERVER MOVE ==================
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def move(ctx, link):
+    embed = discord.Embed(
+        title="🚀 Server Umzug",
+        description=(
+            "Dieser Server zieht um!\n\n"
+            f"👉 **Neuer Server:** {link}\n\n"
+            "Bitte joint dort — dieser Server wird bald geschlossen."
+        ),
+        color=discord.Color.gold()
+    )
+
+    await ctx.send("@everyone", embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
