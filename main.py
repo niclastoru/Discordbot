@@ -34,29 +34,6 @@ def save_afk(data):
 
 afk_users = load_afk()
 
-HISTORY_FILE = "history.json"
-
-def load_history():
-    if not os.path.exists(HISTORY_FILE):
-        return {}
-    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_history(data):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-history_data = load_history()
-
-def add_history(member, action, moderator, reason="—"):
-    uid = str(member.id)
-    history_data.setdefault(uid, []).append({
-        "action": action,
-        "moderator": str(moderator),
-        "reason": reason,
-        "time": datetime.datetime.now().strftime("%d.%m.%Y • %H:%M")
-    })
-    save_history(history_data)
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -256,7 +233,6 @@ async def jail(ctx, member: discord.Member, *, reason="Kein Grund"):
     akten[str(member.id)]["jails"] += 1
     save("akten.json", akten)
     await ctx.send("🔒 Gejailt")
-add_history(member, "JAIL", ctx.author, reason)
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
@@ -264,8 +240,7 @@ async def unjail(ctx, member: discord.Member):
     role = discord.utils.get(ctx.guild.roles, name="jailed")
     await member.remove_roles(role)
     await ctx.send("🔓 Entjailt")
-    add_history(member, "UNJAIL", ctx.author)
-
+    
 @bot.command()
 async def akte(ctx, member: discord.Member = None):
     member = member or ctx.author
