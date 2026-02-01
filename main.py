@@ -640,5 +640,27 @@ async def barfight(ctx, member: discord.Member):
     embed.set_footer(text="Barkeeper sagt: Keine Schlägereien… außer diese 😏")
 
     await ctx.send(embed=embed)
+
+@bot.command()
+async def gerücht(ctx, member: discord.Member = None):
+    member = member or ctx.author
+
+    geruecht = random.choice(GERUECHTE)
+
+    embed = discord.Embed(
+        title="🗣️ Gerücht aus der Bar",
+        description=(
+            f"👤 **Über:** {member.mention}\n\n"
+            f"🍸 *{geruecht}*"
+        ),
+        color=discord.Color.dark_gold()
+    )
+
+    embed.set_footer(
+        text=f"Gerücht serviert von Barkeeper 🍺 | Angefordert von {ctx.author}",
+        icon_url=ctx.author.display_avatar.url
+    )
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
