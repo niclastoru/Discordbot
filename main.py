@@ -34,6 +34,18 @@ def save_afk(data):
 
 afk_users = load_afk()
 
+GERUECHTE = [
+    "Man sagt, er zahlt Drinks immer mit geliehenen Coins 🍺",
+    "Hat angeblich schon mal aus Versehen den Barkeeper beleidigt 😬",
+    "Niemand weiß, wo er war zwischen 02:00 und 03:00 Uhr…",
+    "Bestellt immer Wasser, sagt aber es sei Wodka 👀",
+    "Hat mehr Geheimnisse als die Akten im Keller 🗂️",
+    "Tut unschuldig, aber kennt jede Hintertür 🚪",
+    "Wurde schon mal flüsternd über ihn gesprochen…",
+    "Kennt den Barkeeper angeblich *zu gut* 😏",
+    "War schon öfter in Barfight verwickelt als er zugibt 💥",
+    "Man munkelt… er ist gefährlicher als er aussieht 🔥"
+]
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
