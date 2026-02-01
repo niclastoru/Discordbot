@@ -593,5 +593,40 @@ async def drink(ctx, member: discord.Member = None):
     embed.set_thumbnail(url=target.display_avatar.url)
 
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.cooldown(1, 10, commands.BucketType.user)
+async def barfight(ctx, member: discord.Member):
+    if member.bot or member == ctx.author:
+        await ctx.send("❌ Der Barkeeper kämpft nicht gegen Bots oder sich selbst.")
+        return
+
+    moves = [
+        "wirft ein Bierglas 🍺",
+        "haut mit dem Barhocker 🪑 zu",
+        "schlägt mit einer Whiskyflasche 🥃",
+        "verpasst einen üblen Kinnhaken 🤜",
+        "rutscht aus und tritt trotzdem 😭",
+        "zieht einen Überraschungs-Uppercut ⚡"
+    ]
+
+    winner = random.choice([ctx.author, member])
+    loser = member if winner == ctx.author else ctx.author
+    move = random.choice(moves)
+
+    embed = discord.Embed(
+        title="🥊 BARFIGHT IM KIEZ 🍻",
+        description=(
+            f"🔥 **{ctx.author.display_name}** vs **{member.display_name}**\n\n"
+            f"💥 **{winner.mention}** {move}\n"
+            f"☠️ **{loser.mention}** geht zu Boden!\n\n"
+            f"🍺 Der Barkeeper wischt das Blut weg."
+        ),
+        color=discord.Color.red()
+    )
+
+    embed.set_footer(text="Barkeeper sagt: Keine Schlägereien… außer diese 😏")
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
