@@ -557,5 +557,41 @@ async def move_dm(ctx, link):
     await msg.edit(
         content=f"✅ Fertig.\nGesendet: {sent}\nFehlgeschlagen: {failed}"
     )
+
+@bot.command()
+async def drink(ctx, member: discord.Member = None):
+    drinks = [
+        ("🍺 Bier", "klassisch, kalt und ehrlich."),
+        ("🍷 Wein", "edler Tropfen, ruhig genießen."),
+        ("🥃 Whiskey", "stark. Direkt. Keine Fragen."),
+        ("🍹 Cocktail", "süß, gefährlich – Barkeeper-Empfehlung."),
+        ("🍸 Martini", "geschüttelt, nicht gerührt."),
+        ("🧃 Saft", "für heute lieber ruhig 😇"),
+        ("🔥 Shot", "oha… mutig."),
+        ("☕ Kaffee", "kein Alkohol, aber nötig.")
+    ]
+
+    drink, text = random.choice(drinks)
+
+    if member is None:
+        target = ctx.author
+        desc = f"{ctx.author.mention} bekommt von **Barkeeper** einen **{drink}**.\n\n_{text}_"
+    else:
+        target = member
+        desc = (
+            f"{ctx.author.mention} serviert {member.mention} einen **{drink}** 🍸\n\n"
+            f"_Barkeeper sagt: {text}_"
+        )
+
+    embed = discord.Embed(
+        title="🍸 Barkeeper serviert",
+        description=desc,
+        color=discord.Color.gold()
+    )
+
+    embed.set_footer(text="Barkeeper • Bitte verantwortungsvoll genießen")
+    embed.set_thumbnail(url=target.display_avatar.url)
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
