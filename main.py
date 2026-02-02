@@ -46,6 +46,20 @@ GERUECHTE = [
     "War schon öfter in Barfight verwickelt als er zugibt 💥",
     "Man munkelt… er ist gefährlicher als er aussieht 🔥"
 ]
+
+SCHICKSAL_LISTE = [
+    "🕯️ Wird Recht haben – aber niemand wird es zugeben.",
+    "🍷 Wird sich über etwas aufregen, das er selbst verursacht hat.",
+    "🪙 Wird heute Glück haben… leider nur bei unnützen Dingen.",
+    "👁️ Jemand denkt öfter an diese Person, als sie glaubt.",
+    "🕶️ Wird etwas Wichtiges vergessen – und es später dramatisieren.",
+    "🔥 Hat mehr Einfluss, als er zugibt.",
+    "🍺 Wird heute eine Entscheidung bereuen, aber dazu stehen.",
+    "🌙 Die Nacht bringt Antworten – oder neue Fragen.",
+    "🃏 Sollte heute besser nicht provozieren.",
+    "🔒 Weiß ein Geheimnis, das noch wichtig wird."
+]
+
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
