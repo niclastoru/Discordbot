@@ -162,6 +162,7 @@ async def on_message(message):
             description=random.choice(BARKEEPER_LINES),
             color=discord.Color.dark_gold()
         )
+        
         embed.set_footer(text="Der Barkeeper hat eingegriffen")
         await message.channel.send(embed=embed)
 
