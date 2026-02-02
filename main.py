@@ -153,18 +153,20 @@ async def on_message(message):
             )
 
     import random
-
-# Barkeeper greift selten ein
-if random.randint(1, 100) <= 4:  # 4% Chance
-    embed = discord.Embed(
-        title="🍸 Der Barkeeper spricht",
-        description=random.choice(BARKEEPER_LINES),
-        color=discord.Color.dark_gold()
-    )
-    embed.set_footer(text="Der Barkeeper hat eingegriffen")
-    await message.channel.send(embed=embed)
     
-await bot.process_commands(message)
+   # 🍸 Barkeeper greift selten ein
+    import random
+    if random.randint(1, 100) <= 4:  # 4% Chance
+        embed = discord.Embed(
+            title="🍸 Der Barkeeper spricht",
+            description=random.choice(BARKEEPER_LINES),
+            color=discord.Color.dark_gold()
+        )
+        embed.set_footer(text="Der Barkeeper hat eingegriffen")
+        await message.channel.send(embed=embed)
+
+    # ⚠️ GANZ WICHTIG
+    await bot.process_commands(message)
 
 # ================== BASIC ==================
 @bot.command()
