@@ -164,7 +164,7 @@ if random.randint(1, 100) <= 4:  # 4% Chance
     embed.set_footer(text="Der Barkeeper hat eingegriffen")
     await message.channel.send(embed=embed)
     
-    await bot.process_commands(message)
+await bot.process_commands(message)
 
 # ================== BASIC ==================
 @bot.command()
