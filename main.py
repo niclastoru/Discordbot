@@ -718,5 +718,21 @@ async def detektor(ctx):
 
     embed.set_footer(text=f"Detektor aktiviert von {ctx.author}")
     await ctx.send(embed=embed)
+
+@bot.command()
+async def schicksal(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    prophecy = random.choice(SCHICKSAL_LISTE)
+
+    embed = discord.Embed(
+        title="🔮 Das Schicksal hat gesprochen",
+        description=f"**{member.display_name}**\n\n{prophecy}",
+        color=discord.Color.dark_purple()
+    )
+
+    embed.set_footer(text="Der Barkeeper irrt sich nie 🍺")
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
