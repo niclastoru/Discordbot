@@ -662,5 +662,47 @@ async def gerücht(ctx, member: discord.Member = None):
     )
 
     await ctx.send(embed=embed)
+
+@bot.command()
+async def detektor(ctx):
+    async for msg in ctx.channel.history(limit=10):
+        if msg.author.bot or msg.author == ctx.author:
+            continue
+
+        target_msg = msg
+        break
+    else:
+        await ctx.send("❌ Keine passende Aussage gefunden.")
+        return
+
+    result = random.choice(["truth", "lie", "unknown"])
+
+    if result == "truth":
+        title = "🟢 Wahrheits-Detektor"
+        text = "Der Barkeeper nickt langsam…\n\n**Das klingt ehrlich.** 🧠✨"
+        color = discord.Color.green()
+
+    elif result == "lie":
+        title = "🔴 Lügen-Detektor"
+        text = "Der Barkeeper verengt die Augen…\n\n**Das ist gelogen.** 😈🔥"
+        color = discord.Color.red()
+
+    else:
+        title = "🟡 Detektor unsicher"
+        text = "Der Barkeeper zuckt mit den Schultern…\n\n**Nicht eindeutig.** 🤨"
+        color = discord.Color.gold()
+
+    embed = discord.Embed(
+        title=title,
+        description=(
+            f"👤 **Person:** {target_msg.author.mention}\n"
+            f"💬 **Aussage:**\n> {target_msg.content}\n\n"
+            f"{text}"
+        ),
+        color=color
+    )
+
+    embed.set_footer(text=f"Detektor aktiviert von {ctx.author}")
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
