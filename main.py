@@ -60,6 +60,16 @@ SCHICKSAL_LISTE = [
     "🔒 Weiß ein Geheimnis, das noch wichtig wird."
 ]
 
+BARKEEPER_LINES = [
+    "🍺 Genug. Jetzt rede ich.",
+    "👁️ Ich beobachte euch schon länger.",
+    "💥 Manche sollten heute lieber still sein.",
+    "🕯️ Dein Verhalten bleibt nicht unbemerkt.",
+    "🥃 Setz dich. Wir müssen reden.",
+    "🚬 Du bist heute auffälliger als du denkst.",
+    "🧠 Sag weniger. Denk mehr."
+]
+
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
