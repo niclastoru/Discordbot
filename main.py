@@ -756,5 +756,28 @@ async def schicksal(ctx, member: discord.Member = None):
     embed.set_thumbnail(url=member.display_avatar.url)
 
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def barkeeper(ctx):
+    members = [m for m in ctx.guild.members if not m.bot]
+
+    if not members:
+        await ctx.send("🍺 Heute ist niemand hier.")
+        return
+
+    target = random.choice(members)
+
+    embed = discord.Embed(
+        title="🍸 Der Barkeeper greift ein",
+        description=(
+            f"👁️ **{target.mention}**\n\n"
+            f"{random.choice(BARKEEPER_LINES)}"
+        ),
+        color=discord.Color.dark_red()
+    )
+    embed.set_footer(text=f"Ausgelöst von {ctx.author}")
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
