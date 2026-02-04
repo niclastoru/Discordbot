@@ -886,5 +886,21 @@ async def givekiez(ctx):
             f"⏭️ Schon vorhanden: **{skipped}**"
         )
     )
+
+@bot.command()
+async def chaos(ctx):
+    embed = discord.Embed(
+        title="🧨 CHAOS",
+        description=(
+            f"{ctx.author.mention}\n\n"
+            "Du stehst vor dem roten Knopf.\n"
+            "**Niemand weiß, was passiert.**\n\n"
+            "Drück ihn… wenn du dich traust."
+        ),
+        color=discord.Color.red()
+    )
+    embed.set_footer(text="Der Barkeeper schaut weg.")
+
+    await ctx.send(embed=embed, view=ChaosView(ctx.author))
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
