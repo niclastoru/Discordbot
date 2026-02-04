@@ -397,7 +397,7 @@ class TTT(View):
         for i in range(9):
             self.add_item(TTTBtn(i, self))
 
-class TTTBtn(Button):
+class TTTBtn(button):
     def __init__(self, i, game):
         super().__init__(label=" ", style=ButtonStyle.secondary, row=i//3)
         self.i, self.game = i, game
