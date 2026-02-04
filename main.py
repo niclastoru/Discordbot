@@ -782,5 +782,52 @@ async def barkeeper(ctx):
     embed.set_footer(text=f"Ausgelöst von {ctx.author}")
 
     await ctx.send(embed=embed)
+
+@bot.event
+async def on_member_join(member):
+    role_name = ".gg/dckiez"
+    role = discord.utils.get(member.guild.roles, name=role_name)
+
+    if role:
+        try:
+            await member.add_roles(role)
+            print(f"{member} hat automatisch die Rolle {role_name} bekommen")
+        except Exception as e:
+            print(f"Fehler beim Rollen geben: {e}")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def givekiez(ctx):
+    role_name = "gg/dckiez"
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+
+    if not role:
+        await ctx.send("❌ Rolle `gg/dckiez` wurde nicht gefunden.")
+        return
+
+    added = 0
+    skipped = 0
+
+    msg = await ctx.send("🔄 Verteile Rollen...")
+
+    for member in ctx.guild.members:
+        if member.bot:
+            continue
+        if role in member.roles:
+            skipped += 1
+            continue
+        try:
+            await member.add_roles(role)
+            added += 1
+        except:
+            pass
+
+    await msg.edit(
+        content=(
+            f"✅ **Fertig!**\n"
+            f"👤 Neu vergeben: **{added}**\n"
+            f"⏭️ Schon vorhanden: **{skipped}**"
+        )
+    )
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
