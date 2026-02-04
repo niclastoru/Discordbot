@@ -76,7 +76,7 @@ class ChaosView(View):
         self.user = user
 
     @button(label="🧨 CHAOS AUSLÖSEN", style=ButtonStyle.danger)
-    async def chaos(self, interaction: discord.Interaction, button: Button):
+    async def chaos(self, interaction: discord.Interaction, button):
         if interaction.user != self.user:
             await interaction.response.send_message(
                 "❌ Das ist **nicht** dein Chaos.", ephemeral=True
