@@ -75,7 +75,7 @@ class ChaosView(View):
         super().__init__(timeout=30)
         self.user = user
 
-    @Button(label="🧨 CHAOS AUSLÖSEN", style=ButtonStyle.danger)
+    @button(label="🧨 CHAOS AUSLÖSEN", style=ButtonStyle.danger)
     async def chaos(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.user:
             await interaction.response.send_message(
