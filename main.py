@@ -798,11 +798,11 @@ async def on_member_join(member):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def givekiez(ctx):
-    role_name = "gg/dckiez"
+    role_name = ".gg/dckiez"
     role = discord.utils.get(ctx.guild.roles, name=role_name)
 
     if not role:
-        await ctx.send("❌ Rolle `gg/dckiez` wurde nicht gefunden.")
+        await ctx.send("❌ Rolle `.gg/dckiez` wurde nicht gefunden.")
         return
 
     added = 0
