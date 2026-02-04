@@ -71,61 +71,35 @@ BARKEEPER_LINES = [
 ]
 
 class ChaosView(View):
-    def __init__(self, user):
+    def __init__(self, author):
         super().__init__(timeout=30)
-        self.user = user
+        self.author = author
 
-    @button(label="🧨 CHAOS AUSLÖSEN", style=ButtonStyle.danger)
-    async def chaos(self, interaction: discord.Interaction, button):
-        if interaction.user != self.user:
+    @button(label="🔥 CHAOS AUSLÖSEN", style=ButtonStyle.danger)
+    async def chaos_button(self, interaction: discord.Interaction, btn):
+        if interaction.user != self.author:
             await interaction.response.send_message(
-                "❌ Das ist **nicht** dein Chaos.", ephemeral=True
+                "❌ Das ist **nicht** dein Chaos.",
+                ephemeral=True
             )
             return
 
-        ensure_akte(self.user)
-        uid = str(self.user.id)
-
         outcomes = [
-            ("🍺 Barkeeper", f"🍸 Der Barkeeper starrt {self.user.mention} an… *unangenehm*"),
-            ("💰 Coins +", f"💰 {self.user.mention} findet **+50 Coins** unter dem Tresen"),
-            ("💸 Coins -", f"💸 {self.user.mention} verliert **50 Coins** beim Barfight"),
-            ("⭐ XP +", f"⭐ {self.user.mention} bekommt **+20 XP**"),
-            ("📂 Akte", f"📂 Neue Aktennotiz zu {self.user.mention} wurde vermerkt"),
-            ("🤡 Peinlich", f"🤡 {self.user.mention} rutscht aus. Alle lachen."),
-            ("😇 Glück", f"😇 {self.user.mention} bleibt heute verschont."),
-            ("💀 Chaos", f"💀 {self.user.mention} hätte das lieber nicht gedrückt.")
+            "🍺 Der Barkeeper wirft dich raus.",
+            "💰 Du findest **50 Coins** unter dem Tresen.",
+            "💥 Barfight! Du verlierst **20 XP**.",
+            "😳 Alle lachen. Peinlich.",
+            "😇 Glück gehabt – nichts passiert.",
+            "📝 Eine neue Aktennotiz wurde erstellt.",
+            "🔥 Chaos eskaliert… aber du überlebst."
         ]
 
-        title, text = random.choice(outcomes)
+        result = random.choice(outcomes)
 
-        # Effekte
-        if "Coins +" in title:
-            coins[uid] = coins.get(uid, 0) + 50
-            save_json(COIN_FILE, coins)
-
-        if "Coins -" in title:
-            coins[uid] = max(0, coins.get(uid, 0) - 50)
-            save_json(COIN_FILE, coins)
-
-        if "XP +" in title:
-            xp_data.setdefault(uid, {"xp": 0, "level": 1})
-            xp_data[uid]["xp"] += 20
-            save_json(XP_FILE, xp_data)
-
-        if "Akte" in title:
-            akten[uid]["notiz"] += " | Chaos ausgelöst"
-            save_akten(akten)
-
-        embed = discord.Embed(
-            title=f"🧨 CHAOS – {title}",
-            description=text,
-            color=discord.Color.dark_red()
+        await interaction.response.edit_message(
+            content=f"🎲 **CHAOS AUSGELÖST**\n{result}",
+            view=None
         )
-        embed.set_footer(text="Der Barkeeper grinst.")
-
-        self.clear_items()
-        await interaction.response.edit_message(embed=embed, view=self)
 
 # ================== INTENTS ==================
 intents = discord.Intents.default()
@@ -886,21 +860,11 @@ async def givekiez(ctx):
             f"⏭️ Schon vorhanden: **{skipped}**"
         )
     )
-
 @bot.command()
 async def chaos(ctx):
-    embed = discord.Embed(
-        title="🧨 CHAOS",
-        description=(
-            f"{ctx.author.mention}\n\n"
-            "Du stehst vor dem roten Knopf.\n"
-            "**Niemand weiß, was passiert.**\n\n"
-            "Drück ihn… wenn du dich traust."
-        ),
-        color=discord.Color.red()
+    await ctx.send(
+        "😈 **Willkommen im Chaos**\nDrück den Button, wenn du dich traust.",
+        view=ChaosView(ctx.author)
     )
-    embed.set_footer(text="Der Barkeeper schaut weg.")
-
-    await ctx.send(embed=embed, view=ChaosView(ctx.author))
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
