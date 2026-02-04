@@ -101,6 +101,21 @@ class ChaosView(View):
             view=None
         )
 
+PAST_LINES = [
+    "Vor 5 Jahren: Ahnungslos, aber voller Hoffnung.",
+    "Vor 5 Jahren: Zu gut für diese Welt.",
+    "Vor 5 Jahren: Dachte, er hätte alles im Griff.",
+    "Vor 5 Jahren: Schon damals gefährlich.",
+    "Vor 5 Jahren: Hat Fehler gemacht – große."
+]
+
+FUTURE_LINES = [
+    "In 5 Jahren: Mächtiger, als er jetzt denkt.",
+    "In 5 Jahren: Reich, aber misstrauisch.",
+    "In 5 Jahren: Gleicher Server, andere Rolle.",
+    "In 5 Jahren: Alle kennen seinen Namen.",
+    "In 5 Jahren: Hat alles erreicht – fast."
+]
 # ================== INTENTS ==================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -839,5 +854,27 @@ async def chaos(ctx):
         "😈 **Willkommen im Chaos**\nDrück den Button, wenn du dich traust.",
         view=ChaosView(ctx.author)
     )
+
+@bot.command()
+async def zeitreise(ctx):
+    direction = random.choice(["past", "future"])
+
+    if direction == "past":
+        text = random.choice(PAST_LINES)
+        title = "🕰️ Zeitreise – Vergangenheit"
+        color = discord.Color.dark_blue()
+    else:
+        text = random.choice(FUTURE_LINES)
+        title = "🔮 Zeitreise – Zukunft"
+        color = discord.Color.dark_purple()
+
+    embed = discord.Embed(
+        title=title,
+        description=text,
+        color=color
+    )
+    embed.set_footer(text=f"Zeitreise ausgelöst von {ctx.author.display_name}")
+
+    await ctx.send(embed=embed)
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
