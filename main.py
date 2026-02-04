@@ -362,33 +362,6 @@ async def divorce(ctx):
     await ctx.send("💔 Geschieden")
 
 # ================== TTT ==================
-class TTT(View):
-    def __init__(self, p1, p2):
-        super().__init__(timeout=120)
-        self.board = ["⬜"]*9
-        self.turn = p1
-        self.p1, self.p2 = p1, p2
-        for i in range(9):
-            self.add_item(TTTBtn(i, self))
-
-class TTTBtn(button):
-    def __init__(self, i, game):
-        super().__init__(label=" ", style=ButtonStyle.secondary, row=i//3)
-        self.i, self.game = i, game
-
-    async def callback(self, i):
-        if i.user != self.game.turn:
-            return
-        sym = "❌" if self.game.turn == self.game.p1 else "⭕"
-        self.label = sym
-        self.disabled = True
-        self.game.board[self.i] = sym
-        self.game.turn = self.game.p2 if self.game.turn == self.game.p1 else self.game.p1
-        await i.response.edit_message(view=self.game)
-
-@bot.command()
-async def ttt(ctx, member: discord.Member):
-    await ctx.send("🎮 TicTacToe", view=TTT(ctx.author, member))
 
 @bot.command()
 @commands.has_permissions(administrator=True)
