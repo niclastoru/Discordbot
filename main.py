@@ -885,5 +885,38 @@ async def zeitreise(ctx):
     embed.set_footer(text=f"Zeitreise ausgelöst von {ctx.author.display_name}")
 
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def barkeeperdm(ctx, link: str):
+    embed = discord.Embed(
+        title="🍸 Nachricht vom Barkeeper",
+        description=random.choice(BARKEEPER_AD_TEXTS).format(link=link),
+        color=discord.Color.dark_gold()
+    )
+    embed.set_footer(text="Aus Dreck zu Dominanz")
+
+    sent = 0
+    failed = 0
+
+    status_msg = await ctx.send("📨 Barkeeper verteilt Drinks per DM…")
+
+    for member in ctx.guild.members:
+        if member.bot:
+            continue
+        try:
+            await member.send(embed=embed)
+            sent += 1
+            await asyncio.sleep(1.5)  # WICHTIG gegen Rate-Limit
+        except:
+            failed += 1
+
+    await status_msg.edit(
+        content=(
+            "🍾 **FERTIG**\n"
+            f"✅ Gesendet: **{sent}**\n"
+            f"❌ Fehlgeschlagen: **{failed}**"
+        )
+    )
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
