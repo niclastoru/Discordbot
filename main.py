@@ -5,6 +5,15 @@ from discord.ui import View, button
 from discord import ButtonStyle
 import random, json, os, re
 import datetime
+import asyncio
+
+BARKEEPER_AD_TEXTS = [
+    "🍸 Ich sag nur eins: Aus Dreck wird Dominanz.\nHier ist der Ort, wo man nicht redet – sondern liefert.\n\n👉 {link}",
+    "Man landet nicht hier aus Zufall.\nWenn du Hunger hast auf mehr als nur Chat – komm rein.\n\n🔥 {link}",
+    "Der Barkeeper serviert keine Ausreden.\nNur Bewegung, Stimme und Präsenz.\n\n🍷 {link}",
+    "Manche bleiben unten.\nAndere bauen sich hoch.\nWir sind der zweite Typ.\n\n🚀 {link}",
+    "Kein offizieller Invite.\nNur ein stiller Hinweis.\n\n👁️ {link}"
+]
 
 AUTORESPONDER_FILE = "autoresponder.json"
 
