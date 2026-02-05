@@ -918,5 +918,69 @@ async def barkeeperdm(ctx, link: str):
             f"❌ Fehlgeschlagen: **{failed}**"
         )
     )
+
+@bot.event
+async def on_guild_role_update(before, after):
+    guild = after.guild
+
+    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_update):
+        user = entry.user
+
+        if user.bot:
+            return
+
+        member = guild.get_member(user.id)
+        if not member:
+            return
+
+        # ✅ Ausnahmen
+        if member.guild_permissions.administrator:
+            return
+
+        if any(role.name.lower() == "ceo" for role in member.roles):
+            return
+
+        # ❌ Kick
+        try:
+            await member.kick(reason="Unbefugtes Bearbeiten von Rollen")
+            await guild.system_channel.send(
+                f"🚨 **Sicherheitskick**\n"
+                f"👤 {member.mention}\n"
+                f"🛑 Grund: Rollen bearbeitet"
+            )
+        except:
+            pass
+
+@bot.event
+async def on_guild_role_delete(role):
+    guild = role.guild
+
+    async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
+        user = entry.user
+
+        if user.bot:
+            return
+
+        member = guild.get_member(user.id)
+        if not member:
+            return
+
+        # ✅ Ausnahmen
+        if member.guild_permissions.administrator:
+            return
+
+        if any(r.name.lower() == "ceo" for r in member.roles):
+            return
+
+        # ❌ Kick
+        try:
+            await member.kick(reason="Unbefugtes Löschen einer Rolle")
+            await guild.system_channel.send(
+                f"🚨 **Sicherheitskick**\n"
+                f"👤 {member.mention}\n"
+                f"🛑 Grund: Rolle gelöscht"
+            )
+        except:
+            pass
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
