@@ -999,14 +999,17 @@ async def chat(ctx):
         description=f"Es sind aktuell **{count} Personen** im Chat.",
         color=discord.Color.dark_gold()
     )
-        names = ", ".join(m.display_name for m in active_members[:5])
+
+    # Aktive Namen (max. 5)
+    names = ", ".join(m.display_name for m in active_members[:5])
     embed.add_field(
         name="👥 Aktiv",
         value=names if names else "Niemand gerade",
         inline=False
     )
-    import random
 
+    # Barkeeper Kommentar
+    import random
     lines = [
         "🍸 Ruhiger Moment.",
         "🔥 Gespräche laufen.",
@@ -1019,10 +1022,11 @@ async def chat(ctx):
         value=random.choice(lines),
         inline=False
     )
+
     embed.set_footer(text="Live-Zählung")
     embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
 
     await ctx.send(embed=embed)
-    
+
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
