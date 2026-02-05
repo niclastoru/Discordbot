@@ -982,5 +982,47 @@ async def on_guild_role_delete(role):
             )
         except:
             pass
+
+@bot.command()
+async def chat(ctx):
+    channel = ctx.channel
+
+    active_members = [
+        m for m in channel.members
+        if not m.bot and m.status != discord.Status.offline
+    ]
+
+    count = len(active_members)
+
+    embed = discord.Embed(
+        title="💬 Chat-Aktivität",
+        description=f"Es sind aktuell **{count} Personen** im Chat.",
+        color=discord.Color.dark_gold()
+    )
+        names = ", ".join(m.display_name for m in active_members[:5])
+    embed.add_field(
+        name="👥 Aktiv",
+        value=names if names else "Niemand gerade",
+        inline=False
+    )
+    import random
+
+    lines = [
+        "🍸 Ruhiger Moment.",
+        "🔥 Gespräche laufen.",
+        "👀 Bewegung im Chat.",
+        "🧠 Stimmen sind wach."
+    ]
+
+    embed.add_field(
+        name="🍺 Barkeeper",
+        value=random.choice(lines),
+        inline=False
+    )
+    embed.set_footer(text="Live-Zählung")
+    embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
+
+    await ctx.send(embed=embed)
+    
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
