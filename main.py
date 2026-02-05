@@ -7,6 +7,14 @@ import random, json, os, re
 import datetime
 import asyncio
 
+LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
+CEO_ROLE_NAME = "CEO"                # <-- Rollenname
+
+def is_protected(member: discord.Member):
+    if member.guild_permissions.administrator:
+        return True
+    return any(role.name == CEO_ROLE_NAME for role in member.roles)
+    
 BARKEEPER_AD_TEXTS = [
     "🍸 Ich sag nur eins: Aus Dreck wird Dominanz.\nHier ist der Ort, wo man nicht redet – sondern liefert.\n\n👉 {link}",
     "Man landet nicht hier aus Zufall.\nWenn du Hunger hast auf mehr als nur Chat – komm rein.\n\n🔥 {link}",
@@ -157,28 +165,30 @@ async def on_ready():
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
-    if message.webhook_id is not None:
-    await message.delete()
-    log = discord.Embed(
-        title="🚨 SAY BLOCKIERT",
-        description=f"App/Webhook Nachricht gelöscht",
-        color=discord.Color.red()
-    )
-    log.add_field(name="Inhalt", value=message.content[:1000] or "—")
-    await log_channel.send(embed=log)
-    return
-    
-    if message.author.bot:
+
+    # Nur Server
+    if not message.guild:
         return
 
-    if re.search(r"(discord\.gg/|discord\.com/invite)", message.content.lower()):
-        if not message.author.guild_permissions.administrator:
-            await message.delete()
-            await message.channel.send(
-                f"❌ {message.author.mention} Discord-Server-Links sind verboten!",
-                delete_after=5
+    # 🔥 WEBHOOK / SAY ERKENNEN
+    if message.webhook_id is not None:
+        await message.delete()
+
+        log_channel = message.guild.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(
+                title="🚫 SAY / WEBHOOK BLOCKIERT",
+                description="Eine Webhook-/Say-Nachricht wurde automatisch gelöscht.",
+                color=discord.Color.red()
             )
-            return
+            embed.add_field(
+                name="Inhalt",
+                value=message.content[:1000] or "*Kein Text*",
+                inline=False
+            )
+            await log_channel.send(embed=embed)
+
+        return
 
     uid = str(message.author.id)
     xp.setdefault(uid, {"xp": 0, "level": 1})
