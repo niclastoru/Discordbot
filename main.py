@@ -157,6 +157,17 @@ async def on_ready():
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
+    if message.webhook_id is not None:
+    await message.delete()
+    log = discord.Embed(
+        title="🚨 SAY BLOCKIERT",
+        description=f"App/Webhook Nachricht gelöscht",
+        color=discord.Color.red()
+    )
+    log.add_field(name="Inhalt", value=message.content[:1000] or "—")
+    await log_channel.send(embed=log)
+    return
+    
     if message.author.bot:
         return
 
