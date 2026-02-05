@@ -190,6 +190,17 @@ async def on_message(message):
 
         return
 
+     # ===============================
+    # 🚫 2️⃣ DISCORD-SERVERLINKS BLOCKEN
+    # ===============================
+    if "discord.gg/" in message.content.lower() or "discord.com/invite" in message.content.lower():
+        if not message.author.guild_permissions.administrator:
+            await message.delete()
+            await message.channel.send(
+                f"❌ {message.author.mention} Serverlinks sind hier verboten.",
+                delete_after=5
+            )
+            return
     uid = str(message.author.id)
     xp.setdefault(uid, {"xp": 0, "level": 1})
     xp[uid]["xp"] += 5
