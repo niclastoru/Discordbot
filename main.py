@@ -140,6 +140,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix=",", intents=intents)
+session = aiohttp.ClientSession()
 
 # ================== FILE UTILS ==================
 def load(file, default):
@@ -1097,5 +1098,10 @@ async def stickerclone(ctx):
 
     except Exception as e:
         await ctx.send(f"❌ Fehler: {e}")
+
+@bot.event
+async def on_close():
+    if not session.closed:
+        await session.close()
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
