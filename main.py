@@ -176,24 +176,12 @@ async def on_ready():
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
-      # 🟢 AFK entfernen, wenn User schreibt
-    if uid in afk_users:
-        del afk_users[uid]
-        save_afk(afk_users)
-        await message.channel.send(
-            f"👋 Willkommen zurück {message.author.mention}, AFK entfernt."
-        )
+    if message.author.bot:
+        return
 
-    # 🔔 AFK Hinweis bei Erwähnung
-    for user in message.mentions:
-        u_id = str(user.id)
-        if u_id in afk_users:
-            reason = afk_users[u_id]["reason"]
-            await message.channel.send(
-                f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{reason}**"
-            )
+    uid = str(message.author.id)
 
-      # ================= AFK REMOVE (IMMER ZUERST) =================
+    # ================= AFK REMOVE (IMMER ZUERST) =================
     if uid in afk_users:
         del afk_users[uid]
         save("afk.json", afk_users)
@@ -205,7 +193,15 @@ async def on_message(message):
             )
         except:
             pass
-            
+    # =============================================================
+
+    # 🔔 AFK-HINWEIS BEI ERWÄHNUNG
+    for user in message.mentions:
+        u_id = str(user.id)
+        if u_id in afk_users:
+            await message.channel.send(
+                f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{afk_users[u_id]['reason']}**"
+            )
       # ❌ DMs ignorieren
     if not message.guild:
         return
