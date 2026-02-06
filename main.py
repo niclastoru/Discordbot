@@ -8,7 +8,6 @@ import datetime
 import asyncio
 import aiohttp
 import io
-session = None
 
 LINK_REGEX = re.compile(
     r"(https?:\/\/|www\.|discord\.gg|discord\.com|\.gg\/)",
@@ -166,6 +165,7 @@ marriages = load("marriages.json", {})
 autoresponder = load("autoresponder.json", {})
 
 # ================== READY ==================
+session = None
 @bot.event
 async def on_ready():
     global session
