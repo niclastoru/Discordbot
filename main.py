@@ -6,6 +6,7 @@ from discord import ButtonStyle
 import random, json, os, re
 import datetime
 import asyncio
+import aiohttp
 
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
@@ -1059,6 +1060,41 @@ async def chat(ctx):
     embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
 
     await ctx.send(embed=embed)
+
+@bot.tree.command(name="stickerclone", description="Klon einen Sticker in diesen Server")
+async def stickerclone(interaction: discord.Interaction, sticker: discord.Sticker):
+
+    if not interaction.user.guild_permissions.manage_emojis_and_stickers:
+        await interaction.response.send_message(
+            "❌ Du darfst keine Sticker verwalten.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(sticker.url) as resp:
+            if resp.status != 200:
+                await interaction.followup.send("❌ Sticker konnte nicht geladen werden.")
+                return
+            data = await resp.read()
+
+    try:
+        new_sticker = await interaction.guild.create_sticker(
+            name=sticker.name,
+            description=sticker.description or "Geklont",
+            emoji="🔥",
+            file=discord.File(fp=bytes(data), filename="sticker.png"),
+            reason=f"Sticker geklont von {interaction.user}"
+        )
+
+        await interaction.followup.send(
+            f"✅ Sticker **{new_sticker.name}** wurde geklont!"
+        )
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Fehler: {e}")
 
 # ================== RUN ==================
 bot.run(os.environ["TOKEN"])
