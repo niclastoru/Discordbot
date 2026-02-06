@@ -10,6 +10,11 @@ import aiohttp
 import io
 session = None
 
+LINK_REGEX = re.compile(
+    r"(https?:\/\/|www\.|discord\.gg|discord\.com|\.gg\/)",
+    re.IGNORECASE
+)
+
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
 
@@ -171,6 +176,40 @@ async def on_ready():
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
+      # ❌ DMs ignorieren
+    if not message.guild:
+        return
+
+    # 🔒 Admins sind geschützt
+    if message.author.guild_permissions.administrator:
+        await bot.process_commands(message)
+        return
+
+    # 🤖 Andere BOTS (AFK, Say, etc.)
+    if message.author.bot:
+        if LINK_REGEX.search(message.content):
+            try:
+                await message.delete()
+            except:
+                pass
+        return
+
+    # 🚨 NORMALER USER POSTET LINK → SOFORT BAN zeigen
+    if LINK_REGEX.search(message.content):
+        try:
+            await message.delete()
+        except:
+            pass
+
+        try:
+            await message.guild.ban(
+                message.author,
+                reason="Automatischer Bann: Link / Werbung"
+            )
+        except:
+            pass
+
+        return
 
     # Nur Server
     if not message.guild:
