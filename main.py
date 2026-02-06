@@ -7,6 +7,7 @@ import random, json, os, re
 import datetime
 import asyncio
 import aiohttp
+import io
 
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
