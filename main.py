@@ -8,6 +8,7 @@ import datetime
 import asyncio
 import aiohttp
 import io
+session = None
 
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
@@ -140,7 +141,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix=",", intents=intents)
-session = aiohttp.ClientSession()
 
 # ================== FILE UTILS ==================
 def load(file, default):
@@ -163,8 +163,11 @@ autoresponder = load("autoresponder.json", {})
 # ================== READY ==================
 @bot.event
 async def on_ready():
-    print(f"✅ Online als {bot.user}")
+    global session
+    if session is None or session.closed:
+        session = aiohttp.ClientSession()
 
+    print(f"✅ Online als {bot.user}")
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
