@@ -181,18 +181,19 @@ async def on_message(message):
 
     uid = str(message.author.id)
 
-    # ================= AFK REMOVE (IMMER ZUERST) =================
-    if uid in afk_users:
-        del afk_users[uid]
-        save("afk.json", afk_users)
+  # ================= AFK REMOVE =================
+if (
+    uid in afk_users
+    and not message.content.startswith(("!", "/"))
+):
+    del afk_users[uid]
+    save("afk.json", afk_users)
 
-        try:
-            await message.channel.send(
-                f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
-                delete_after=5
-            )
-        except:
-            pass
+    await message.channel.send(
+        f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
+        delete_after=5
+    )
+# ==============================================
     # =============================================================
 
     # 🔔 AFK-HINWEIS BEI ERWÄHNUNG
