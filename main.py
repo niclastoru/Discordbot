@@ -192,6 +192,19 @@ async def on_message(message):
             await message.channel.send(
                 f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{reason}**"
             )
+
+      # ================= AFK REMOVE (IMMER ZUERST) =================
+    if uid in afk_users:
+        del afk_users[uid]
+        save("afk.json", afk_users)
+
+        try:
+            await message.channel.send(
+                f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
+                delete_after=5
+            )
+        except:
+            pass
             
       # ❌ DMs ignorieren
     if not message.guild:
