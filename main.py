@@ -1088,20 +1088,22 @@ async def stickerclone(ctx):
                 return
             data = await resp.read()
 
+    file = discord.File(fp=io.BytesIO(data), filename="sticker.png")
+
     try:
         await ctx.guild.create_sticker(
             name=sticker.name,
-            description=sticker.description or "Geklont",
+            description="Geklont über Barkeeper 🍸",
             emoji="🔥",
-            file=discord.File(fp=data, filename="sticker.png"),
+            file=file,
             reason=f"Sticker geklont von {ctx.author}"
         )
 
         await ctx.send(f"✅ Sticker **{sticker.name}** wurde geklont.")
 
     except Exception as e:
-        await ctx.send(f"❌ Fehler: {e}")
-
+        await ctx.send(f"❌ Fehler: `{e}`")
+        
 @bot.event
 async def on_close():
     if not session.closed:
