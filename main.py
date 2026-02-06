@@ -181,28 +181,31 @@ async def on_message(message):
 
     uid = str(message.author.id)
 
-  # ================= AFK REMOVE =================
-if (
-    uid in afk_users
-    and not message.content.startswith(("!", "/"))
-):
-    del afk_users[uid]
-    save("afk.json", afk_users)
+    # ================= AFK REMOVE =================
+    if (
+        uid in afk_users
+        and not message.content.startswith(("!", "/"))
+    ):
+        del afk_users[uid]
+        save("afk.json", afk_users)
 
-    await message.channel.send(
-        f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
-        delete_after=5
-    )
-# ==============================================
-    # =============================================================
+        await message.channel.send(
+            f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
+            delete_after=5
+        )
+    # ==============================================
 
     # 🔔 AFK-HINWEIS BEI ERWÄHNUNG
     for user in message.mentions:
         u_id = str(user.id)
         if u_id in afk_users:
             await message.channel.send(
-                f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{afk_users[u_id]['reason']}**"
+                f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{afk_users[u_id]['reason']}**",
+                delete_after=5
             )
+
+    # ⚠️ GANZ WICHTIG – IMMER AM ENDE
+    await bot.process_commands(message)
       # ❌ DMs ignorieren
     if not message.guild:
         return
