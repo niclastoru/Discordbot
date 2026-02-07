@@ -9,11 +9,6 @@ import asyncio
 import aiohttp
 import io
 
-LINK_REGEX = re.compile(
-    r"(https?:\/\/|www\.|discord\.gg|discord\.com|\.gg\/)",
-    re.IGNORECASE
-)
-
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
 
@@ -174,6 +169,11 @@ async def on_ready():
 
     print(f"✅ Online als {bot.user}")
 # ================== LINK BLOCK ==================
+DISCORD_INVITE_REGEX = re.compile(
+    r"(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord\.com\/invite)\/\w+",
+    re.IGNORECASE
+)
+
 @bot.event
 async def on_message(message):
     if not message.guild:
@@ -181,31 +181,34 @@ async def on_message(message):
 
     content = message.content.lower()
 
-    # 🚨 SERVERLINK = IMMER DELETE + BAN (AUCH SAY / WEBHOOK)
-    if re.search(r"(discord\.gg\/|discord\.com\/invite\/|\/\w{2,})", content):
+    # 🚨 DISCORD SERVERLINK → IMMER BLOCK
+    if DISCORD_INVITE_REGEX.search(content):
         try:
             await message.delete()
         except:
             pass
 
-        # nur echte User bannen
+        # Nur echte User bannen
         if not message.author.bot:
             try:
                 await message.guild.ban(
                     message.author,
-                    reason="Automatischer Bann: Serverlink / Werbung"
+                    reason="Automatischer Bann: Discord-Serverlink"
                 )
             except:
                 pass
 
         return
 
-    # 🔥 WEBHOOK BLOCK (nur wenn KEIN Link, sonst oben)
+    # 🔥 WEBHOOK KOMPLETT VERBOTEN
     if message.webhook_id is not None:
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
         return
 
-    # 🤖 andere Bots ignorieren
+    # 🤖 Bots ignorieren (nach Webhook-Check!)
     if message.author.bot:
         return
 
@@ -221,7 +224,7 @@ async def on_message(message):
             delete_after=5
         )
 
-    # 🔔 AFK HINWEIS
+    # 🔔 AFK-HINWEIS BEI ERWÄHNUNG
     for user in message.mentions:
         u_id = str(user.id)
         if u_id in afk_users:
@@ -229,9 +232,7 @@ async def on_message(message):
                 f"💤 **{user.display_name}** ist AFK\n📌 Grund: **{afk_users[u_id]['reason']}**",
                 delete_after=5
             )
-
-
-        
+     
     uid = str(message.author.id)
     xp.setdefault(uid, {"xp": 0, "level": 1})
     xp[uid]["xp"] += 5
