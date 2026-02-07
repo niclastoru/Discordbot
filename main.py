@@ -176,31 +176,52 @@ async def on_ready():
 # ================== LINK BLOCK ==================
 @bot.event
 async def on_message(message):
-    if message.author.bot:
+    if not message.guild:
         return
 
-    if not message.guild:
+    content = message.content.lower()
+
+    # 🚨 SERVERLINK = IMMER DELETE + BAN (AUCH SAY / WEBHOOK)
+    if re.search(r"(discord\.gg\/|discord\.com\/invite\/|\/\w{2,})", content):
+        try:
+            await message.delete()
+        except:
+            pass
+
+        # nur echte User bannen
+        if not message.author.bot:
+            try:
+                await message.guild.ban(
+                    message.author,
+                    reason="Automatischer Bann: Serverlink / Werbung"
+                )
+            except:
+                pass
+
+        return
+
+    # 🔥 WEBHOOK BLOCK (nur wenn KEIN Link, sonst oben)
+    if message.webhook_id is not None:
+        await message.delete()
+        return
+
+    # 🤖 andere Bots ignorieren
+    if message.author.bot:
         return
 
     uid = str(message.author.id)
 
     # ================= AFK REMOVE =================
-    if uid in afk_users:
-        # AFK nur entfernen bei normalem Text
-        if (
-            not message.content.startswith(("!", "/", ",")) 
-            and not re.search(r"(discord\.gg|discord\.com\/invite)", message.content.lower())
-        ):
-            del afk_users[uid]
-            save("afk.json", afk_users)
+    if uid in afk_users and not message.content.startswith(("!", "/")):
+        del afk_users[uid]
+        save("afk.json", afk_users)
 
-            await message.channel.send(
-                f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
-                delete_after=5
-            )
-    # ==============================================
+        await message.channel.send(
+            f"👋 Willkommen zurück {message.author.mention}, AFK entfernt.",
+            delete_after=5
+        )
 
-    # 🔔 AFK-HINWEIS BEI ERWÄHNUNG
+    # 🔔 AFK HINWEIS
     for user in message.mentions:
         u_id = str(user.id)
         if u_id in afk_users:
@@ -209,47 +230,7 @@ async def on_message(message):
                 delete_after=5
             )
 
-    # 🔒 Admins sind geschützt
-    if message.author.guild_permissions.administrator:
-        await bot.process_commands(message)
-        return
 
-    # 🔥 WEBHOOK / SAY → IMMER BLOCKIEREN
-    if message.webhook_id is not None:
-        await message.delete()
-
-        log_channel = message.guild.get_channel(LOG_CHANNEL_ID)
-        if log_channel:
-            embed = discord.Embed(
-                title="🚫 WEBHOOK BLOCKIERT",
-                description="Webhook-/Say-Nachricht wurde gelöscht.",
-                color=discord.Color.red()
-            )
-            embed.add_field(
-                name="Inhalt",
-                value=message.content[:1000] or "*Kein Text*",
-                inline=False
-            )
-            await log_channel.send(embed=embed)
-
-        return
-
-    # 🚨 SERVERLINK → DELETE + BAN
-    if re.search(r"(discord\.gg\/|discord\.com\/invite\/|\/\w{2,})", message.content.lower()):
-        try:
-            await message.delete()
-        except:
-            pass
-
-        try:
-            await message.guild.ban(
-                message.author,
-                reason="Automatischer Bann: Serverlink / Werbung"
-            )
-        except:
-            pass
-
-        return
         
     uid = str(message.author.id)
     xp.setdefault(uid, {"xp": 0, "level": 1})
