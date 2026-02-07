@@ -204,8 +204,6 @@ async def on_message(message):
                 delete_after=5
             )
 
-    # ⚠️ GANZ WICHTIG – IMMER AM ENDE
-    await bot.process_commands(message)
       # ❌ DMs ignorieren
     if not message.guild:
         return
