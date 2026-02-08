@@ -10,6 +10,8 @@ import aiohttp
 import io
 WHITELIST_ROLE_IDS = {
     1466186406794891439, 
+    1469874129930027257,
+    
 }
 def is_whitelisted(member: discord.Member) -> bool:
     return any(role.id in WHITELIST_ROLE_IDS for role in member.roles)
