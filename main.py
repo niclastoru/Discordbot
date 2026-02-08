@@ -8,7 +8,12 @@ import datetime
 import asyncio
 import aiohttp
 import io
-
+WHITELIST_ROLE_IDS = {
+    1466186406794891439, 
+}
+def is_whitelisted(member: discord.Member) -> bool:
+    return any(role.id in WHITELIST_ROLE_IDS for role in member.roles)
+    
 LOG_CHANNEL_ID = 123456789012345678  # <-- Log-Channel-ID
 CEO_ROLE_NAME = "CEO"                # <-- Rollenname
 
@@ -173,11 +178,15 @@ DISCORD_INVITE_REGEX = re.compile(
     r"(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord\.com\/invite)\/\w+",
     re.IGNORECASE
 )
-
 @bot.event
 async def on_message(message):
     if not message.guild:
         return
+
+    # 🟢 WHITELIST → DARF ALLES
+    if isinstance(message.author, discord.Member) and is_whitelisted(message.author):
+        await bot.process_commands(message)
+        return  # ✅ NUR für Whitelist
 
     content = message.content.lower()
 
