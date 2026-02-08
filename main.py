@@ -873,7 +873,7 @@ async def on_member_join(member):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def givekiez(ctx):
-    role_name = ".gg/dckiez"
+    role_name = ".gg/treppenhaus"
     role = discord.utils.get(ctx.guild.roles, name=role_name)
 
     if not role:
