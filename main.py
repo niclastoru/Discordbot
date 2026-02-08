@@ -860,7 +860,7 @@ async def barkeeper(ctx):
 
 @bot.event
 async def on_member_join(member):
-    role_name = ".gg/dckiez"
+    role_name = ".gg/treppenhaus"
     role = discord.utils.get(member.guild.roles, name=role_name)
 
     if role:
@@ -877,7 +877,7 @@ async def givekiez(ctx):
     role = discord.utils.get(ctx.guild.roles, name=role_name)
 
     if not role:
-        await ctx.send("❌ Rolle `.gg/dckiez` wurde nicht gefunden.")
+        await ctx.send("❌ Rolle `.gg/treppenhaus` wurde nicht gefunden.")
         return
 
     added = 0
