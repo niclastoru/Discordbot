@@ -464,6 +464,43 @@ async def stats(ctx, member: discord.Member = None):
     path = create_stats_image(member, m1, m7, m14, v1, v7, v14)
 
     await ctx.send(file=discord.File(path))
+
+@bot.command(aliases=["av"])
+async def avatar(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+
+    embed = discord.Embed(
+        title=f"🖼️ Avatar von {member}",
+        color=discord.Color.blurple()
+    )
+
+    embed.set_image(url=member.display_avatar.url)
+    embed.set_footer(text=f"ID: {member.id}")
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+
+    user = await bot.fetch_user(member.id)
+
+    if user.banner:
+        embed = discord.Embed(
+            title=f"🎨 Banner von {member}",
+            color=discord.Color.blurple()
+        )
+        embed.set_image(url=user.banner.url)
+    else:
+        embed = discord.Embed(
+            title="❌ Kein Banner",
+            description=f"{member} hat kein Banner.",
+            color=discord.Color.red()
+        )
+
+    await ctx.send(embed=embed)
 # ================= START =================
 
 bot.run(TOKEN)
