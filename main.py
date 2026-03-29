@@ -192,7 +192,7 @@ async def jail(ctx, member: discord.Member):
         color=discord.Color.dark_red()
     ))
 
-@bot.command().
+@bot.command()
 async def unjail(ctx, member: discord.Member):
 
     if not is_staff(ctx.author, ctx.guild):
