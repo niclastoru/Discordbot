@@ -53,26 +53,39 @@ def create_stats_image(member, m1, m7, m14, v1, v7, v14):
     draw = ImageDraw.Draw(img)
 
     font_title = ImageFont.truetype("Inter_24pt-Bold.ttf", 32)
-    font_big = ImageFont.truetype("Inter_24pt-Regular.ttf", 24)
-    font_small = ImageFont.truetype("Inter_24pt-Regular.ttf", 18)
+    font_big = ImageFont.truetype("Inter_24pt-Regular.ttf", 22)
+    font_small = ImageFont.truetype("Inter_24pt-Regular.ttf", 16)
+
+    def box(x, y, w, h):
+        draw.rounded_rectangle((x, y, x+w, y+h), radius=20, fill=(30,30,35))
 
     # Avatar
     response = requests.get(member.display_avatar.url)
-    avatar = Image.open(BytesIO(response.content)).resize((90, 90))
+    avatar = Image.open(BytesIO(response.content)).resize((80, 80))
     img.paste(avatar, (40, 40))
 
     # Name
-    draw.text((150, 60), str(member), fill=(255,255,255), font=font_title)
+    draw.text((140, 60), str(member), fill=(255,255,255), font=font_title)
 
-    # Messages
-    draw.text((100, 200), f"1d: {m1}", fill=(255,255,255), font=font_big)
-    draw.text((100, 240), f"7d: {m7}", fill=(255,255,255), font=font_big)
-    draw.text((100, 280), f"14d: {m14}", fill=(255,255,255), font=font_big)
+    # BOXEN
+    box(40, 150, 300, 170)   # Server
+    box(380, 150, 300, 170)  # Messages
+    box(720, 150, 300, 170)  # Voice
 
-    # Voice
-    draw.text((400, 200), f"1d: {v1}h", fill=(255,255,255), font=font_big)
-    draw.text((400, 240), f"7d: {v7}h", fill=(255,255,255), font=font_big)
-    draw.text((400, 280), f"14d: {v14}h", fill=(255,255,255), font=font_big)
+    # TITLES
+    draw.text((60, 170), "Server Stats", fill=(180,180,180), font=font_small)
+    draw.text((400, 170), "Messages", fill=(180,180,180), font=font_small)
+    draw.text((740, 170), "Voice Activity", fill=(180,180,180), font=font_small)
+
+    # MESSAGES
+    draw.text((400, 210), f"1d  {m1}", fill=(255,255,255), font=font_big)
+    draw.text((400, 240), f"7d  {m7}", fill=(255,255,255), font=font_big)
+    draw.text((400, 270), f"14d {m14}", fill=(255,255,255), font=font_big)
+
+    # VOICE
+    draw.text((740, 210), f"1d  {v1}h", fill=(255,255,255), font=font_big)
+    draw.text((740, 240), f"7d  {v7}h", fill=(255,255,255), font=font_big)
+    draw.text((740, 270), f"14d {v14}h", fill=(255,255,255), font=font_big)
 
     path = f"stats_{member.id}.png"
     img.save(path)
