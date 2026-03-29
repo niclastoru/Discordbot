@@ -6,7 +6,7 @@ from datetime import timedelta
 from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
-
+import random
 TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
@@ -555,6 +555,59 @@ async def info(ctx, member: discord.Member = None):
         embed.set_image(url=user.banner.url)
 
     embed.set_footer(text=f"Requested by {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def gayrate(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+
+    embed = discord.Embed(
+        title="🏳️‍🌈 Gay Rate",
+        description=f"{member.mention} ist zu **{percent}% gay** 😈",
+        color=discord.Color.magenta()
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    await ctx.send(embed=embed)
+
+# ================= STRAIGHT RATE =================
+
+@bot.command()
+async def straight(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+
+    embed = discord.Embed(
+        title="📏 Straight Rate",
+        description=f"{member.mention} ist zu **{percent}% straight** 👀",
+        color=discord.Color.blue()
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    await ctx.send(embed=embed)
+
+# ================= LESBIAN RATE =================
+
+@bot.command()
+async def lesbian(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+    percent = random.randint(0, 100)
+
+    embed = discord.Embed(
+        title="💖 Lesbian Rate",
+        description=f"{member.mention} ist zu **{percent}% lesbian** 😏",
+        color=discord.Color.pink()
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
 
     await ctx.send(embed=embed)
 # ================= START =================
