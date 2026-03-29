@@ -14,6 +14,8 @@ bot = commands.Bot(command_prefix="_", intents=intents, case_insensitive=True)
 
 # ================= FILES =================
 
+AR_FILE = "autoresponder.json"
+
 STAFF_FILE = "staff.json"
 
 def load_staff():
@@ -90,6 +92,19 @@ def create_stats_image(member, m1, m7, m14, v1, v7, v14):
     path = f"stats_{member.id}.png"
     img.save(path)
     return path
+
+def load_ar():
+    try:
+        with open(AR_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_ar(data):
+    with open(AR_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+autoresponder = load_ar()
 
 # ================= READY =================
 
@@ -608,6 +623,79 @@ async def lesbian(ctx, member: discord.Member = None):
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def ar_add(ctx, *, text):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du darfst das nicht nutzen.",
+            color=discord.Color.red()
+        ))
+
+    try:
+        trigger, response = map(str.strip, text.split("|", 1))
+    except:
+        return await ctx.send(embed=discord.Embed(
+            title="⚠️ Nutzung",
+            description="_ar_add trigger | antwort",
+            color=discord.Color.orange()
+        ))
+
+    autoresponder[trigger.lower()] = response
+    save_ar(autoresponder)
+
+    await ctx.send(embed=discord.Embed(
+        title="✅ AutoResponder hinzugefügt",
+        description=f"**Trigger:** {trigger}\n**Antwort:** {response}",
+        color=discord.Color.green()
+    ))
+
+@bot.command()
+async def ar_remove(ctx, *, trigger):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du darfst das nicht nutzen.",
+            color=discord.Color.red()
+        ))
+
+    if trigger.lower() not in autoresponder:
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Nicht gefunden",
+            description="Dieser Trigger existiert nicht.",
+            color=discord.Color.red()
+        ))
+
+    del autoresponder[trigger.lower()]
+    save_ar(autoresponder)
+
+    await ctx.send(embed=discord.Embed(
+        title="🗑️ Entfernt",
+        description=f"{trigger} wurde gelöscht.",
+        color=discord.Color.orange()
+    ))
+
+@bot.command()
+async def ar_list(ctx):
+
+    if not autoresponder:
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine AutoResponder",
+            color=discord.Color.red()
+        ))
+
+    text = "\n".join([f"**{k}** → {v}" for k, v in autoresponder.items()])
+
+    embed = discord.Embed(
+        title="📋 AutoResponder Liste",
+        description=text[:4000],
+        color=discord.Color.blurple()
+    )
 
     await ctx.send(embed=embed)
 # ================= START =================
