@@ -26,6 +26,23 @@ def save_staff(data):
 
 staff_roles = load_staff()
 
+from datetime import datetime, timedelta
+
+STATS_FILE = "stats.json"
+
+def load_stats():
+    try:
+        with open(STATS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_stats(data):
+    with open(STATS_FILE, "w") as f:
+        json.dump(data, f)
+
+stats_data = load_stats()
+
 # ================= READY =================
 
 @bot.event
@@ -312,6 +329,113 @@ async def untimeout(ctx, member: discord.Member):
         color=discord.Color.green()
     ))
 
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    guild_id = str(message.guild.id)
+    user_id = str(message.author.id)
+    now = datetime.utcnow().isoformat()
+
+    if guild_id not in stats_data:
+        stats_data[guild_id] = {}
+
+    if user_id not in stats_data[guild_id]:
+        stats_data[guild_id][user_id] = {
+            "messages": []
+        }
+
+    stats_data[guild_id][user_id]["messages"].append(now)
+    save_stats(stats_data)
+
+    await bot.process_commands(message)
+
+voice_times = {}
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+
+    guild_id = str(member.guild.id)
+    user_id = str(member.id)
+
+    # JOIN
+    if not before.channel and after.channel:
+        voice_times[user_id] = datetime.utcnow()
+
+    # LEAVE
+    if before.channel and not after.channel:
+        if user_id in voice_times:
+            start = voice_times.pop(user_id)
+            duration = (datetime.utcnow() - start).total_seconds()
+
+            if guild_id not in stats_data:
+                stats_data[guild_id] = {}
+
+            if user_id not in stats_data[guild_id]:
+                stats_data[guild_id][user_id] = {
+                    "messages": [],
+                    "voice": []
+                }
+
+            if "voice" not in stats_data[guild_id][user_id]:
+                stats_data[guild_id][user_id]["voice"] = []
+
+            stats_data[guild_id][user_id]["voice"].append({
+                "time": datetime.utcnow().isoformat(),
+                "duration": duration
+            })
+
+            save_stats(stats_data)
+
+@bot.command()
+async def stats(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+
+    guild_id = str(ctx.guild.id)
+    user_id = str(member.id)
+
+    now = datetime.utcnow()
+
+    messages = stats_data.get(guild_id, {}).get(user_id, {}).get("messages", [])
+    voice = stats_data.get(guild_id, {}).get(user_id, {}).get("voice", [])
+
+    def count_messages(days):
+        return len([
+            m for m in messages
+            if datetime.fromisoformat(m) > now - timedelta(days=days)
+        ])
+
+    def count_voice(days):
+        total = 0
+        for v in voice:
+            if datetime.fromisoformat(v["time"]) > now - timedelta(days=days):
+                total += v["duration"]
+        return round(total / 3600, 2)  # hours
+
+    embed = discord.Embed(
+        title=f"📊 Stats von {member}",
+        color=discord.Color.blurple()
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    # MESSAGES
+    embed.add_field(
+        name="💬 Nachrichten",
+        value=f"1d: {count_messages(1)}\n7d: {count_messages(7)}\n14d: {count_messages(14)}",
+        inline=True
+    )
+
+    # VOICE
+    embed.add_field(
+        name="🔊 Voice",
+        value=f"1d: {count_voice(1)}h\n7d: {count_voice(7)}h\n14d: {count_voice(14)}h",
+        inline=True
+    )
+
+    await ctx.send(embed=embed)
 # ================= START =================
 
 bot.run(TOKEN)
