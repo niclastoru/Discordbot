@@ -501,6 +501,62 @@ async def banner(ctx, member: discord.Member = None):
         )
 
     await ctx.send(embed=embed)
+
+@bot.command(aliases=["userinfo", "user"])
+async def info(ctx, member: discord.Member = None):
+
+    member = member or ctx.author
+
+    user = await bot.fetch_user(member.id)
+
+    embed = discord.Embed(
+        title=f"👤 Info über {member}",
+        color=discord.Color.blurple()
+    )
+
+    # Avatar
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+    # Basic Infos
+    embed.add_field(name="🆔 ID", value=member.id, inline=False)
+    embed.add_field(name="📛 Name", value=f"{member}", inline=False)
+
+    # Daten
+    embed.add_field(
+        name="📅 Account erstellt",
+        value=member.created_at.strftime("%d.%m.%Y"),
+        inline=True
+    )
+
+    embed.add_field(
+        name="📥 Beigetreten",
+        value=member.joined_at.strftime("%d.%m.%Y"),
+        inline=True
+    )
+
+    # Rollen
+    roles = [role.mention for role in member.roles if role.name != "@everyone"]
+
+    if roles:
+        embed.add_field(
+            name=f"🎭 Rollen [{len(roles)}]",
+            value=" ".join(roles[:10]),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="🎭 Rollen",
+            value="Keine Rollen",
+            inline=False
+        )
+
+    # Banner
+    if user.banner:
+        embed.set_image(url=user.banner.url)
+
+    embed.set_footer(text=f"Requested by {ctx.author}")
+
+    await ctx.send(embed=embed)
 # ================= START =================
 
 bot.run(TOKEN)
