@@ -2,15 +2,16 @@ import discord
 from discord.ext import commands
 import os
 import json
+from datetime import timedelta
 
-TOKEN = os.getenv("TOKEN")  # oder direkt: "DEIN_TOKEN"
+TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="_", intents=intents, case_insensitive=True)
 
 # ================= FILES =================
 
-STAFF_FILE = "Json"
+STAFF_FILE = "staff.json"
 
 def load_staff():
     try:
@@ -35,10 +36,8 @@ async def on_ready():
 
 def is_staff(member, guild):
     guild_id = str(guild.id)
-
     if guild_id not in staff_roles:
         return False
-
     return any(role.id in staff_roles[guild_id] for role in member.roles)
 
 # ================= ERROR HANDLER =================
@@ -94,7 +93,7 @@ async def settings(ctx, category: str, action: str = None, role: discord.Role = 
 
             return await ctx.send(embed=discord.Embed(
                 title="✅ Rolle hinzugefügt",
-                description=f"{role.mention} wurde als Staff Rolle gespeichert.",
+                description=f"{role.mention} wurde gespeichert.",
                 color=discord.Color.green()
             ))
 
@@ -118,16 +117,6 @@ async def settings(ctx, category: str, action: str = None, role: discord.Role = 
             description=desc,
             color=discord.Color.blue()
         ))
-
-    await ctx.send(embed=discord.Embed(
-        title="⚙️ Settings Hilfe",
-        description="""
-_settings staff add @Rolle  
-_settings staff remove @Rolle  
-_settings staff list
-""",
-        color=discord.Color.blurple()
-    ))
 
 # ================= ROLE =================
 
@@ -153,12 +142,12 @@ async def role(ctx, member: discord.Member, *, role_name: str):
     if role in member.roles:
         await member.remove_roles(role)
         title = "🗑️ Rolle entfernt"
-        desc = f"{role.mention} wurde von {member.mention} entfernt."
+        desc = f"{role.mention} entfernt von {member.mention}"
         color = discord.Color.orange()
     else:
         await member.add_roles(role)
         title = "✅ Rolle hinzugefügt"
-        desc = f"{member.mention} hat jetzt {role.mention}."
+        desc = f"{member.mention} hat jetzt {role.mention}"
         color = discord.Color.green()
 
     await ctx.send(embed=discord.Embed(title=title, description=desc, color=color))
@@ -171,7 +160,6 @@ async def jail(ctx, member: discord.Member):
     if not is_staff(ctx.author, ctx.guild):
         return await ctx.send(embed=discord.Embed(
             title="❌ Keine Rechte",
-            description="Du hast keine Rechte um diesen Command zu nutzen.",
             color=discord.Color.red()
         ))
 
@@ -186,9 +174,18 @@ async def jail(ctx, member: discord.Member):
 
     await member.add_roles(role)
 
+    try:
+        await member.send(embed=discord.Embed(
+            title="🔒 Du wurdest gejailt",
+            description=f"Server: {ctx.guild.name}",
+            color=discord.Color.dark_red()
+        ))
+    except:
+        pass
+
     await ctx.send(embed=discord.Embed(
         title="🔒 User gejailt",
-        description=f"{member.mention} wurde gejailt.",
+        description=f"{member.mention} wurde gejailt",
         color=discord.Color.dark_red()
     ))
 
@@ -198,7 +195,6 @@ async def unjail(ctx, member: discord.Member):
     if not is_staff(ctx.author, ctx.guild):
         return await ctx.send(embed=discord.Embed(
             title="❌ Keine Rechte",
-            description="Du hast keine Rechte um diesen Command zu nutzen.",
             color=discord.Color.red()
         ))
 
@@ -207,12 +203,21 @@ async def unjail(ctx, member: discord.Member):
     if role in member.roles:
         await member.remove_roles(role)
 
+    try:
+        await member.send(embed=discord.Embed(
+            title="🔓 Du wurdest entjailt",
+            description=f"Server: {ctx.guild.name}",
+            color=discord.Color.green()
+        ))
+    except:
+        pass
+
     await ctx.send(embed=discord.Embed(
         title="🔓 User entjailt",
-        description=f"{member.mention} ist frei.",
+        description=f"{member.mention} ist frei",
         color=discord.Color.green()
     ))
-
+    
 # ================= BAN =================
 
 @bot.command()
@@ -221,15 +226,23 @@ async def ban(ctx, member: discord.Member, *, reason=None):
     if not is_staff(ctx.author, ctx.guild):
         return await ctx.send(embed=discord.Embed(
             title="❌ Keine Rechte",
-            description="Du hast keine Rechte um diesen Command zu nutzen.",
             color=discord.Color.red()
         ))
+
+    try:
+        await member.send(embed=discord.Embed(
+            title="🔨 Du wurdest gebannt",
+            description=f"Grund: {reason}",
+            color=discord.Color.red()
+        ))
+    except:
+        pass
 
     await member.ban(reason=reason)
 
     await ctx.send(embed=discord.Embed(
         title="🔨 User gebannt",
-        description=f"{member.mention} wurde gebannt.\nGrund: {reason}",
+        description=f"{member.mention} wurde gebannt",
         color=discord.Color.red()
     ))
 
@@ -239,16 +252,63 @@ async def unban(ctx, user_id: int):
     if not is_staff(ctx.author, ctx.guild):
         return await ctx.send(embed=discord.Embed(
             title="❌ Keine Rechte",
-            description="Du hast keine Rechte um diesen Command zu nutzen.",
             color=discord.Color.red()
         ))
 
     user = await bot.fetch_user(user_id)
+
     await ctx.guild.unban(user)
 
     await ctx.send(embed=discord.Embed(
         title="♻️ User entbannt",
-        description=f"{user} wurde entbannt.",
+        description=f"{user} wurde entbannt",
+        color=discord.Color.green()
+    ))
+    
+# ================= TIMEOUT =================
+
+@bot.command()
+async def timeout(ctx, member: discord.Member, minutes: int):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            color=discord.Color.red()
+        ))
+
+    duration = discord.utils.utcnow() + timedelta(minutes=minutes)
+
+    await member.timeout(duration)
+
+    try:
+        await member.send(embed=discord.Embed(
+            title="🔇 Timeout",
+            description=f"{minutes} Minuten",
+            color=discord.Color.orange()
+        ))
+    except:
+        pass
+
+    await ctx.send(embed=discord.Embed(
+        title="🔇 Timeout gesetzt",
+        description=f"{member.mention} für {minutes} Minuten",
+        color=discord.Color.orange()
+    ))
+
+@bot.command()
+async def untimeout(ctx, member: discord.Member):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            color=discord.Color.red()
+        ))
+
+    await member.timeout(None)
+
+    await ctx.send(embed=discord.Embed(
+        title="🔊 Timeout entfernt",
+        description=f"{member.mention} ist frei",
         color=discord.Color.green()
     ))
 
