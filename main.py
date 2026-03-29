@@ -46,51 +46,36 @@ def save_stats(data):
 
 stats_data = load_stats()
 
-def create_statbot_image(member, m1, m7, m14, v1, v7, v14):
+def create_stats_image(member, m1, m7, m14, v1, v7, v14):
 
-    width, height = 900, 500
-    img = Image.new("RGB", (width, height), (24, 25, 28))
+    width, height = 1100, 600
+    img = Image.new("RGB", (width, height), (14, 15, 18))
     draw = ImageDraw.Draw(img)
 
-    # Fonts (fallback default)
-    font_title = ImageFont.load_default()
-    font_text = ImageFont.load_default()
+    font_title = ImageFont.truetype("Inter_24pt-Bold.ttf", 32)
+    font_big = ImageFont.truetype("Inter_24pt-Regular.ttf", 24)
+    font_small = ImageFont.truetype("Inter_24pt-Regular.ttf", 18)
 
     # Avatar
     response = requests.get(member.display_avatar.url)
-    avatar = Image.open(BytesIO(response.content)).resize((80, 80))
+    avatar = Image.open(BytesIO(response.content)).resize((90, 90))
     img.paste(avatar, (40, 40))
 
-    # Username
-    draw.text((140, 60), str(member), fill=(255,255,255), font=font_title)
+    # Name
+    draw.text((150, 60), str(member), fill=(255,255,255), font=font_title)
 
-    # BOX FUNCTION
-    def box(x, y, w, h, title):
-        draw.rectangle((x, y, x+w, y+h), fill=(32, 34, 37))
-        draw.text((x+15, y+10), title, fill=(180,180,180), font=font_text)
+    # Messages
+    draw.text((100, 200), f"1d: {m1}", fill=(255,255,255), font=font_big)
+    draw.text((100, 240), f"7d: {m7}", fill=(255,255,255), font=font_big)
+    draw.text((100, 280), f"14d: {m14}", fill=(255,255,255), font=font_big)
 
-    # BOXES
-    box(40, 150, 250, 150, "Server Ranks")
-    box(320, 150, 250, 150, "Messages")
-    box(600, 150, 250, 150, "Voice Activity")
+    # Voice
+    draw.text((400, 200), f"1d: {v1}h", fill=(255,255,255), font=font_big)
+    draw.text((400, 240), f"7d: {v7}h", fill=(255,255,255), font=font_big)
+    draw.text((400, 280), f"14d: {v14}h", fill=(255,255,255), font=font_big)
 
-    # SERVER RANK (fake erstmal)
-    draw.text((60, 200), "Message: #--", fill=(255,255,255))
-    draw.text((60, 230), "Voice: No Data", fill=(255,255,255))
-
-    # MESSAGES
-    draw.text((340, 200), f"1d  {m1}", fill=(255,255,255))
-    draw.text((340, 230), f"7d  {m7}", fill=(255,255,255))
-    draw.text((340, 260), f"14d {m14}", fill=(255,255,255))
-
-    # VOICE
-    draw.text((620, 200), f"1d  {v1}h", fill=(255,255,255))
-    draw.text((620, 230), f"7d  {v7}h", fill=(255,255,255))
-    draw.text((620, 260), f"14d {v14}h", fill=(255,255,255))
-
-    path = f"statbot_{member.id}.png"
+    path = f"stats_{member.id}.png"
     img.save(path)
-
     return path
 
 # ================= READY =================
@@ -445,17 +430,13 @@ async def stats(ctx, member: discord.Member = None):
 
     guild_id = str(ctx.guild.id)
     user_id = str(member.id)
-
     now = datetime.utcnow()
 
     messages = stats_data.get(guild_id, {}).get(user_id, {}).get("messages", [])
     voice = stats_data.get(guild_id, {}).get(user_id, {}).get("voice", [])
 
     def count_messages(days):
-        return len([
-            m for m in messages
-            if datetime.fromisoformat(m) > now - timedelta(days=days)
-        ])
+        return len([m for m in messages if datetime.fromisoformat(m) > now - timedelta(days=days)])
 
     def count_voice(days):
         total = 0
@@ -467,10 +448,9 @@ async def stats(ctx, member: discord.Member = None):
     m1, m7, m14 = count_messages(1), count_messages(7), count_messages(14)
     v1, v7, v14 = count_voice(1), count_voice(7), count_voice(14)
 
-    path = create_statbot_image(member, m1, m7, m14, v1, v7, v14)
+    path = create_stats_image(member, m1, m7, m14, v1, v7, v14)
 
     await ctx.send(file=discord.File(path))
-
 # ================= START =================
 
 bot.run(TOKEN)
