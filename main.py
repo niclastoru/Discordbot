@@ -46,38 +46,49 @@ def save_stats(data):
 
 stats_data = load_stats()
 
-def create_stats_image(member, msg1, msg7, msg14, voice1, voice7, voice14):
+def create_statbot_image(member, m1, m7, m14, v1, v7, v14):
 
-    width, height = 800, 400
-    img = Image.new("RGB", (width, height), (15, 15, 25))
+    width, height = 900, 500
+    img = Image.new("RGB", (width, height), (24, 25, 28))
     draw = ImageDraw.Draw(img)
 
-    # FONT
-    font_big = ImageFont.load_default()
-    font_small = ImageFont.load_default()
+    # Fonts (fallback default)
+    font_title = ImageFont.load_default()
+    font_text = ImageFont.load_default()
 
-    # AVATAR
+    # Avatar
     response = requests.get(member.display_avatar.url)
-    avatar = Image.open(BytesIO(response.content)).resize((100, 100))
+    avatar = Image.open(BytesIO(response.content)).resize((80, 80))
+    img.paste(avatar, (40, 40))
 
-    img.paste(avatar, (30, 30))
+    # Username
+    draw.text((140, 60), str(member), fill=(255,255,255), font=font_title)
 
-    # NAME
-    draw.text((150, 40), str(member), font=font_big, fill=(255,255,255))
+    # BOX FUNCTION
+    def box(x, y, w, h, title):
+        draw.rectangle((x, y, x+w, y+h), fill=(32, 34, 37))
+        draw.text((x+15, y+10), title, fill=(180,180,180), font=font_text)
+
+    # BOXES
+    box(40, 150, 250, 150, "Server Ranks")
+    box(320, 150, 250, 150, "Messages")
+    box(600, 150, 250, 150, "Voice Activity")
+
+    # SERVER RANK (fake erstmal)
+    draw.text((60, 200), "Message: #--", fill=(255,255,255))
+    draw.text((60, 230), "Voice: No Data", fill=(255,255,255))
 
     # MESSAGES
-    draw.text((50, 180), f"Messages", fill=(180,180,255))
-    draw.text((50, 210), f"1d: {msg1}", fill=(255,255,255))
-    draw.text((50, 240), f"7d: {msg7}", fill=(255,255,255))
-    draw.text((50, 270), f"14d: {msg14}", fill=(255,255,255))
+    draw.text((340, 200), f"1d  {m1}", fill=(255,255,255))
+    draw.text((340, 230), f"7d  {m7}", fill=(255,255,255))
+    draw.text((340, 260), f"14d {m14}", fill=(255,255,255))
 
     # VOICE
-    draw.text((400, 180), f"Voice", fill=(180,255,180))
-    draw.text((400, 210), f"1d: {voice1}h", fill=(255,255,255))
-    draw.text((400, 240), f"7d: {voice7}h", fill=(255,255,255))
-    draw.text((400, 270), f"14d: {voice14}h", fill=(255,255,255))
+    draw.text((620, 200), f"1d  {v1}h", fill=(255,255,255))
+    draw.text((620, 230), f"7d  {v7}h", fill=(255,255,255))
+    draw.text((620, 260), f"14d {v14}h", fill=(255,255,255))
 
-    path = f"stats_{member.id}.png"
+    path = f"statbot_{member.id}.png"
     img.save(path)
 
     return path
@@ -453,20 +464,12 @@ async def stats(ctx, member: discord.Member = None):
                 total += v["duration"]
         return round(total / 3600, 2)
 
-    # Werte holen
-    m1 = count_messages(1)
-    m7 = count_messages(7)
-    m14 = count_messages(14)
+    m1, m7, m14 = count_messages(1), count_messages(7), count_messages(14)
+    v1, v7, v14 = count_voice(1), count_voice(7), count_voice(14)
 
-    v1 = count_voice(1)
-    v7 = count_voice(7)
-    v14 = count_voice(14)
-
-    # IMAGE ERSTELLEN
-    path = create_stats_image(member, m1, m7, m14, v1, v7, v14)
+    path = create_statbot_image(member, m1, m7, m14, v1, v7, v14)
 
     await ctx.send(file=discord.File(path))
-
 
 # ================= START =================
 
