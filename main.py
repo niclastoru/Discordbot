@@ -3,6 +3,9 @@ from discord.ext import commands
 import os
 import json
 from datetime import timedelta
+from PIL import Image, ImageDraw, ImageFont
+import requests
+from io import BytesIO
 
 TOKEN = os.getenv("TOKEN")
 
@@ -42,6 +45,42 @@ def save_stats(data):
         json.dump(data, f)
 
 stats_data = load_stats()
+
+def create_stats_image(member, msg1, msg7, msg14, voice1, voice7, voice14):
+
+    width, height = 800, 400
+    img = Image.new("RGB", (width, height), (15, 15, 25))
+    draw = ImageDraw.Draw(img)
+
+    # FONT
+    font_big = ImageFont.load_default()
+    font_small = ImageFont.load_default()
+
+    # AVATAR
+    response = requests.get(member.display_avatar.url)
+    avatar = Image.open(BytesIO(response.content)).resize((100, 100))
+
+    img.paste(avatar, (30, 30))
+
+    # NAME
+    draw.text((150, 40), str(member), font=font_big, fill=(255,255,255))
+
+    # MESSAGES
+    draw.text((50, 180), f"Messages", fill=(180,180,255))
+    draw.text((50, 210), f"1d: {msg1}", fill=(255,255,255))
+    draw.text((50, 240), f"7d: {msg7}", fill=(255,255,255))
+    draw.text((50, 270), f"14d: {msg14}", fill=(255,255,255))
+
+    # VOICE
+    draw.text((400, 180), f"Voice", fill=(180,255,180))
+    draw.text((400, 210), f"1d: {voice1}h", fill=(255,255,255))
+    draw.text((400, 240), f"7d: {voice7}h", fill=(255,255,255))
+    draw.text((400, 270), f"14d: {voice14}h", fill=(255,255,255))
+
+    path = f"stats_{member.id}.png"
+    img.save(path)
+
+    return path
 
 # ================= READY =================
 
@@ -412,30 +451,23 @@ async def stats(ctx, member: discord.Member = None):
         for v in voice:
             if datetime.fromisoformat(v["time"]) > now - timedelta(days=days):
                 total += v["duration"]
-        return round(total / 3600, 2)  # hours
+        return round(total / 3600, 2)
 
-    embed = discord.Embed(
-        title=f"📊 Stats von {member}",
-        color=discord.Color.blurple()
-    )
+    # Werte holen
+    m1 = count_messages(1)
+    m7 = count_messages(7)
+    m14 = count_messages(14)
 
-    embed.set_thumbnail(url=member.display_avatar.url)
+    v1 = count_voice(1)
+    v7 = count_voice(7)
+    v14 = count_voice(14)
 
-    # MESSAGES
-    embed.add_field(
-        name="💬 Nachrichten",
-        value=f"1d: {count_messages(1)}\n7d: {count_messages(7)}\n14d: {count_messages(14)}",
-        inline=True
-    )
+    # IMAGE ERSTELLEN
+    path = create_stats_image(member, m1, m7, m14, v1, v7, v14)
 
-    # VOICE
-    embed.add_field(
-        name="🔊 Voice",
-        value=f"1d: {count_voice(1)}h\n7d: {count_voice(7)}h\n14d: {count_voice(14)}h",
-        inline=True
-    )
+    await ctx.send(file=discord.File(path))
 
-    await ctx.send(embed=embed)
+
 # ================= START =================
 
 bot.run(TOKEN)
