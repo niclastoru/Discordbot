@@ -1,126 +1,257 @@
 import discord
 from discord.ext import commands
 import os
+import json
 
-TOKEN = os.getenv("TOKEN")  # oder direkt "DEIN_TOKEN"
+TOKEN = os.getenv("TOKEN")  # oder direkt: "DEIN_TOKEN"
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="_", intents=intents)
+bot = commands.Bot(command_prefix="_", intents=intents, case_insensitive=True)
+
+# ================= FILES =================
+
+STAFF_FILE = "Json"
+
+def load_staff():
+    try:
+        with open(STAFF_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_staff(data):
+    with open(STAFF_FILE, "w") as f:
+        json.dump(data, f)
+
+staff_roles = load_staff()
 
 # ================= READY =================
+
 @bot.event
 async def on_ready():
-    print(f"🛡️ Jerry online als {bot.user}")
+    print(f"🔥 Jerry ist online als {bot.user}")
 
-# ================= ROLE (ADD + REMOVE) =================
+# ================= STAFF CHECK =================
+
+def is_staff(member, guild):
+    guild_id = str(guild.id)
+
+    if guild_id not in staff_roles:
+        return False
+
+    return any(role.id in staff_roles[guild_id] for role in member.roles)
+
+# ================= ERROR HANDLER =================
+
+@bot.event
+async def on_command_error(ctx, error):
+
+    if isinstance(error, commands.MissingPermissions):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
+
+    if isinstance(error, commands.MissingRequiredArgument):
+        return await ctx.send(embed=discord.Embed(
+            title="⚠️ Falsche Nutzung",
+            description=f"Nutze den Command richtig: `{ctx.prefix}{ctx.command} ...`",
+            color=discord.Color.orange()
+        ))
+
+    if isinstance(error, commands.BadArgument):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Fehler",
+            description="Ungültige Eingabe.",
+            color=discord.Color.red()
+        ))
+
+# ================= SETTINGS =================
+
+@bot.command()
+async def settings(ctx, category: str, action: str = None, role: discord.Role = None):
+
+    if not ctx.author.guild_permissions.administrator:
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
+
+    if category.lower() != "staff":
+        return
+
+    guild_id = str(ctx.guild.id)
+
+    if guild_id not in staff_roles:
+        staff_roles[guild_id] = []
+
+    if action == "add" and role:
+        if role.id not in staff_roles[guild_id]:
+            staff_roles[guild_id].append(role.id)
+            save_staff(staff_roles)
+
+            return await ctx.send(embed=discord.Embed(
+                title="✅ Rolle hinzugefügt",
+                description=f"{role.mention} wurde als Staff Rolle gespeichert.",
+                color=discord.Color.green()
+            ))
+
+    if action == "remove" and role:
+        if role.id in staff_roles[guild_id]:
+            staff_roles[guild_id].remove(role.id)
+            save_staff(staff_roles)
+
+            return await ctx.send(embed=discord.Embed(
+                title="🗑️ Rolle entfernt",
+                description=f"{role.mention} wurde entfernt.",
+                color=discord.Color.orange()
+            ))
+
+    if action == "list":
+        roles = [ctx.guild.get_role(r) for r in staff_roles[guild_id]]
+        desc = "\n".join([r.mention for r in roles if r]) or "Keine Rollen gesetzt."
+
+        return await ctx.send(embed=discord.Embed(
+            title="📋 Staff Rollen",
+            description=desc,
+            color=discord.Color.blue()
+        ))
+
+    await ctx.send(embed=discord.Embed(
+        title="⚙️ Settings Hilfe",
+        description="""
+_settings staff add @Rolle  
+_settings staff remove @Rolle  
+_settings staff list
+""",
+        color=discord.Color.blurple()
+    ))
+
+# ================= ROLE =================
+
 @bot.command(aliases=["r"])
-@commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, role_name: str):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
 
     role = discord.utils.get(ctx.guild.roles, name=role_name)
 
     if not role:
-        embed = discord.Embed(
+        return await ctx.send(embed=discord.Embed(
             title="❌ Fehler",
-            description=f"Rolle **{role_name}** nicht gefunden.",
+            description="Rolle nicht gefunden.",
             color=discord.Color.red()
-        )
-        return await ctx.send(embed=embed)
+        ))
 
     if role in member.roles:
         await member.remove_roles(role)
-
-        embed = discord.Embed(
-            title="🗑️ Rolle entfernt",
-            description=f"{role.mention} wurde von {member.mention} entfernt",
-            color=discord.Color.orange()
-        )
-        await ctx.send(embed=embed)
-
+        title = "🗑️ Rolle entfernt"
+        desc = f"{role.mention} wurde von {member.mention} entfernt."
+        color = discord.Color.orange()
     else:
         await member.add_roles(role)
+        title = "✅ Rolle hinzugefügt"
+        desc = f"{member.mention} hat jetzt {role.mention}."
+        color = discord.Color.green()
 
-        embed = discord.Embed(
-            title="✅ Rolle hinzugefügt",
-            description=f"{member.mention} hat jetzt {role.mention}",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
+    await ctx.send(embed=discord.Embed(title=title, description=desc, color=color))
 
 # ================= JAIL =================
+
 @bot.command()
-@commands.has_permissions(moderate_members=True)
-async def jail(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+async def jail(ctx, member: discord.Member):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
 
     role = discord.utils.get(ctx.guild.roles, name="jailed")
 
     if not role:
-        embed = discord.Embed(
+        return await ctx.send(embed=discord.Embed(
             title="❌ Fehler",
-            description="Rolle **jailed** existiert nicht.",
+            description="Rolle 'jailed' existiert nicht.",
             color=discord.Color.red()
-        )
-        return await ctx.send(embed=embed)
+        ))
 
     await member.add_roles(role)
 
-    embed = discord.Embed(
+    await ctx.send(embed=discord.Embed(
         title="🔒 User gejailt",
-        description=f"{member.mention} wurde gejailt\n📝 Grund: **{reason}**",
+        description=f"{member.mention} wurde gejailt.",
         color=discord.Color.dark_red()
-    )
-    await ctx.send(embed=embed)
+    ))
 
-# ================= UNJAIL =================
-@bot.command()
-@commands.has_permissions(moderate_members=True)
+@bot.command().
 async def unjail(ctx, member: discord.Member):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
 
     role = discord.utils.get(ctx.guild.roles, name="jailed")
 
     if role in member.roles:
         await member.remove_roles(role)
 
-        embed = discord.Embed(
-            title="🔓 User entlassen",
-            description=f"{member.mention} wurde entjailt",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
+    await ctx.send(embed=discord.Embed(
+        title="🔓 User entjailt",
+        description=f"{member.mention} ist frei.",
+        color=discord.Color.green()
+    ))
 
 # ================= BAN =================
+
 @bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+async def ban(ctx, member: discord.Member, *, reason=None):
 
-    try:
-        await member.send(f"🚫 Du wurdest gebannt von {ctx.guild.name}\nGrund: {reason}")
-    except:
-        pass
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
 
-    await ctx.guild.ban(member, reason=reason)
+    await member.ban(reason=reason)
 
-    embed = discord.Embed(
+    await ctx.send(embed=discord.Embed(
         title="🔨 User gebannt",
-        description=f"{member} wurde gebannt\n📝 Grund: **{reason}**",
+        description=f"{member.mention} wurde gebannt.\nGrund: {reason}",
         color=discord.Color.red()
-    )
-    await ctx.send(embed=embed)
+    ))
 
-# ================= UNBAN =================
 @bot.command()
-@commands.has_permissions(ban_members=True)
 async def unban(ctx, user_id: int):
+
+    if not is_staff(ctx.author, ctx.guild):
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du hast keine Rechte um diesen Command zu nutzen.",
+            color=discord.Color.red()
+        ))
 
     user = await bot.fetch_user(user_id)
     await ctx.guild.unban(user)
 
-    embed = discord.Embed(
-        title="✅ User entbannt",
-        description=f"{user} wurde entbannt",
+    await ctx.send(embed=discord.Embed(
+        title="♻️ User entbannt",
+        description=f"{user} wurde entbannt.",
         color=discord.Color.green()
-    )
-    await ctx.send(embed=embed)
+    ))
 
-# ================= RUN =================
+# ================= START =================
+
 bot.run(TOKEN)
