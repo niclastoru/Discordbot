@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=".", intents=intents, case_insensitive=True)
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
 DATA_FILE = "data.json"
 
