@@ -698,6 +698,37 @@ async def ar_list(ctx):
     )
 
     await ctx.send(embed=embed)
+
+@bot.command(aliases=["clear", "c"])
+@commands.has_permissions(manage_messages=True)
+async def purge(ctx, amount: int = None):
+    if amount is None:
+        embed = discord.Embed(
+            title="❌ Fehler",
+            description="Nutze: `_purge <anzahl>`",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    if amount > 100:
+        embed = discord.Embed(
+            title="❌ Fehler",
+            description="Du kannst maximal 100 Nachrichten löschen!",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    deleted = await ctx.channel.purge(limit=amount + 1)
+
+    embed = discord.Embed(
+        title="🧹 Nachrichten gelöscht",
+        description=f"{len(deleted)-1} Nachrichten wurden entfernt.",
+        color=discord.Color.green()
+    )
+    msg = await ctx.send(embed=embed)
+    await msg.delete(delay=5)
 # ================= START =================
 
 bot.run(TOKEN)
