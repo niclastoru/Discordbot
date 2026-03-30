@@ -7,6 +7,11 @@ from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
 import random
+import time
+
+sniped_messages = {}
+SNIPER_TIMEOUT = 7200  # 2 Stunden
+
 TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
@@ -145,6 +150,17 @@ async def on_command_error(ctx, error):
             description="Ungültige Eingabe.",
             color=discord.Color.red()
         ))
+
+@bot.event
+async def on_message_delete(message):
+    if message.author.bot:
+        return
+
+    sniped_messages[message.channel.id] = {
+        "content": message.content,
+        "author": message.author,
+        "time": time.time()
+    }
 
 # ================= SETTINGS =================
 
@@ -729,6 +745,58 @@ async def purge(ctx, amount: int = None):
     )
     msg = await ctx.send(embed=embed)
     await msg.delete(delay=5)
+
+@bot.command()
+async def s(ctx):
+    data = sniped_messages.get(ctx.channel.id)
+
+    if not data:
+        embed = discord.Embed(
+            title="❌ Keine Daten",
+            description="Es gibt keine gelöschten Nachrichten.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    # Zeit prüfen
+    if time.time() - data["time"] > SNIPER_TIMEOUT:
+        embed = discord.Embed(
+            title="❌ Keine Daten",
+            description="Es gibt keine gelöschten Nachrichten in den letzten 2 Stunden.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    embed = discord.Embed(
+        title="🕵️ Gelöschte Nachricht",
+        description=data["content"] or "*Keine Textnachricht*",
+        color=discord.Color.blurple()
+    )
+    embed.set_footer(text=f"Von: {data['author']}")
+    
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def cs(ctx):
+    if ctx.channel.id in sniped_messages:
+        del sniped_messages[ctx.channel.id]
+
+        embed = discord.Embed(
+            title="🧹 Sniper gelöscht",
+            description="Gelöschte Nachrichten wurden entfernt.",
+            color=discord.Color.green()
+        )
+    else:
+        embed = discord.Embed(
+            title="❌ Keine Daten",
+            description="Es gibt nichts zu löschen.",
+            color=discord.Color.red()
+        )
+
+    await ctx.send(embed=embed)
 # ================= START =================
 
 bot.run(TOKEN)
