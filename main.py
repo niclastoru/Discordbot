@@ -26,6 +26,20 @@ def parse_time(time_str):
     return None
 
 TOKEN = os.getenv("TOKEN")
+STAFF_FILE = "staff.json"
+
+def load_staff():
+    try:
+        with open(STAFF_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_staff():
+    with open(STAFF_FILE, "w") as f:
+        json.dump(staff_roles, f, indent=4)
+
+staff_roles = load_staff()
 
 intents = discord.Intents.all()
 
@@ -172,6 +186,19 @@ async def on_command_error(ctx, error):
 async def on_ready():
     print(f"🔥 Bot online als {bot.user}")
 
+def is_staff(member):
+    
+    # Admins haben IMMER Zugriff
+    if member.guild_permissions.administrator:
+        return True
+
+    guild_id = str(member.guild.id)
+
+    if guild_id not in staff_roles:
+        return False
+
+    return any(role.id in staff_roles[guild_id] for role in member.roles)
+
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong!")
@@ -298,5 +325,41 @@ async def untimeout(ctx, user_input: str):
         color=discord.Color.green()
     )
     await ctx.send(embed=embed)
+
+@bot.command()
+async def settings(ctx, category: str, action: str = None, role: discord.Role = None):
+
+    if not ctx.author.guild_permissions.administrator:
+        return await ctx.send("❌ Keine Rechte")
+
+    if category.lower() != "staff":
+        return
+
+    guild_id = str(ctx.guild.id)
+
+    # Server initialisieren
+    if guild_id not in staff_roles:
+        staff_roles[guild_id] = []
+
+    # ADD
+    if action == "add" and role:
+        if role.id not in staff_roles[guild_id]:
+            staff_roles[guild_id].append(role.id)
+            save_staff()
+            return await ctx.send(f"✅ {role.mention} hinzugefügt")
+
+    # REMOVE
+    if action == "remove" and role:
+        if role.id in staff_roles[guild_id]:
+            staff_roles[guild_id].remove(role.id)
+            save_staff()
+            return await ctx.send(f"🗑️ {role.mention} entfernt")
+
+    # LIST
+    if action == "list":
+        roles = [ctx.guild.get_role(r) for r in staff_roles[guild_id]]
+        text = "\n".join([r.mention for r in roles if r]) or "Keine Rollen"
+
+        return await ctx.send(f"📋 Staff Rollen:\n{text}")
 
 bot.run(TOKEN)
