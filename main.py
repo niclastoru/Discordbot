@@ -1,6 +1,29 @@
 import discord
 from discord.ext import commands
 import os
+import re
+from datetime import timedelta
+
+def parse_time(time_str):
+    time_str = time_str.lower().replace(" ", "")
+
+    match = re.match(r"(\d+)([smhd]?)", time_str)
+    if not match:
+        return None
+
+    value, unit = match.groups()
+    value = int(value)
+
+    if unit == "s":
+        return timedelta(seconds=value)
+    elif unit == "m" or unit == "":
+        return timedelta(minutes=value)
+    elif unit == "h":
+        return timedelta(hours=value)
+    elif unit == "d":
+        return timedelta(days=value)
+
+    return None
 
 TOKEN = os.getenv("TOKEN")
 
@@ -155,27 +178,53 @@ async def ping(ctx):
 
 @bot.command()
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+async def ban(ctx, user_input: str, *, reason="Kein Grund angegeben"):
+
+    user = None
+
+    # 🔹 Versuch als Mention / Member
+    if ctx.message.mentions:
+        user = ctx.message.mentions[0]
+
+    # 🔹 Versuch als ID
+    else:
+        try:
+            user = await bot.fetch_user(int(user_input))
+        except:
+            return await ctx.send("❌ Ungültiger User oder ID")
+
+    # 🔹 DM schicken
     try:
-        await member.send(f"🔨 Du wurdest gebannt\nServer: {ctx.guild.name}\nGrund: {reason}")
+        await user.send(f"🔨 Du wurdest gebannt\nServer: {ctx.guild.name}\nGrund: {reason}")
     except:
         pass
 
-    await member.ban(reason=reason)
+    # 🔹 Ban
+    try:
+        await ctx.guild.ban(user, reason=reason)
+    except Exception as e:
+        return await ctx.send(f"❌ Fehler: {e}")
 
     embed = discord.Embed(
         title="🔨 User gebannt",
-        description=f"{member.mention} wurde gebannt\nGrund: {reason}",
+        description=f"{user} wurde gebannt\nGrund: {reason}",
         color=discord.Color.red()
     )
     await ctx.send(embed=embed)
 
-
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def unban(ctx, user_id: int):
-    user = await bot.fetch_user(user_id)
-    await ctx.guild.unban(user)
+
+    try:
+        user = await bot.fetch_user(user_id)
+    except:
+        return await ctx.send("❌ Ungültige User ID")
+
+    try:
+        await ctx.guild.unban(user)
+    except:
+        return await ctx.send("❌ User ist nicht gebannt")
 
     embed = discord.Embed(
         title="♻️ User entbannt",
@@ -184,24 +233,64 @@ async def unban(ctx, user_id: int):
     )
     await ctx.send(embed=embed)
 
-
 @bot.command()
 @commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, minutes: int):
-    duration = discord.utils.utcnow() + timedelta(minutes=minutes)
-    await member.timeout(duration)
+async def timeout(ctx, user_input: str, time: str):
+
+    member = None
+
+    # 🔹 Mention check
+    if ctx.message.mentions:
+        member = ctx.message.mentions[0]
+
+    # 🔹 ID check
+    else:
+        try:
+            member = await ctx.guild.fetch_member(int(user_input))
+        except:
+            return await ctx.send("❌ User nicht im Server")
+
+    duration = parse_time(time)
+
+    if not duration:
+        return await ctx.send(embed=discord.Embed(
+            title="❌ Ungültige Zeit",
+            description="Beispiele:\n`?timeout @user 10m`\n`?timeout @user 2h`\n`?timeout @user 1d`",
+            color=discord.Color.red()
+        ))
+
+    until = discord.utils.utcnow() + duration
+
+    await member.timeout(until)
 
     embed = discord.Embed(
         title="🔇 Timeout",
-        description=f"{member.mention} für {minutes} Minuten",
+        description=f"{member.mention} wurde getimeoutet\nDauer: `{time}`",
         color=discord.Color.orange()
     )
     await ctx.send(embed=embed)
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
-async def untimeout(ctx, member: discord.Member):
-    await member.timeout(None)
+async def untimeout(ctx, user_input: str):
+
+    member = None
+
+    # 🔹 Mention
+    if ctx.message.mentions:
+        member = ctx.message.mentions[0]
+
+    # 🔹 ID
+    else:
+        try:
+            member = await ctx.guild.fetch_member(int(user_input))
+        except:
+            return await ctx.send("❌ User nicht im Server")
+
+    try:
+        await member.timeout(None)
+    except:
+        return await ctx.send("❌ Fehler beim Entfernen des Timeouts")
 
     embed = discord.Embed(
         title="🔊 Timeout entfernt",
