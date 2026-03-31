@@ -13,49 +13,99 @@ bot = commands.Bot(
     help_command=None
 )
 
-class HelpView(discord.ui.View):
+class HelpDropdown(discord.ui.Select):
     def __init__(self):
-        super().__init__(timeout=60)
+        options = [
+            discord.SelectOption(label="Moderation", description="Ban, Timeout etc."),
+            discord.SelectOption(label="User", description="Avatar, Info etc."),
+            discord.SelectOption(label="Fun", description="Fun Commands"),
+            discord.SelectOption(label="System", description="Settings, Sniper etc.")
+        ]
 
-    @discord.ui.button(label="Moderation", style=discord.ButtonStyle.red)
-    async def mod(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="🛠️ Moderation",
-            description="""
+        super().__init__(
+            placeholder="Wähle ein Modul",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        choice = self.values[0]
+
+        if choice == "Moderation":
+            embed = discord.Embed(
+                title="🛠️ Moderation",
+                description="""
 `?ban`
 `?unban`
 `?timeout`
+`?untimeout`
 `?role`
-            """,
-            color=discord.Color.red()
-        )
-        await interaction.response.edit_message(embed=embed, view=self)
+`?purge`
+                """,
+                color=discord.Color.red()
+            )
 
-    @discord.ui.button(label="User", style=discord.ButtonStyle.blurple)
-    async def user(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="👤 User",
-            description="""
+        elif choice == "User":
+            embed = discord.Embed(
+                title="👤 User",
+                description="""
 `?avatar`
+`?banner`
 `?info`
 `?stats`
-            """,
-            color=discord.Color.blurple()
-        )
-        await interaction.response.edit_message(embed=embed, view=self)
+                """,
+                color=discord.Color.blurple()
+            )
 
-    @discord.ui.button(label="Fun", style=discord.ButtonStyle.green)
-    async def fun(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="🎮 Fun",
-            description="""
+        elif choice == "Fun":
+            embed = discord.Embed(
+                title="🎮 Fun",
+                description="""
 `?gayrate`
 `?straight`
 `?lesbian`
-            """,
-            color=discord.Color.green()
-        )
-        await interaction.response.edit_message(embed=embed, view=self)
+                """,
+                color=discord.Color.green()
+            )
+
+        elif choice == "System":
+            embed = discord.Embed(
+                title="⚙️ System",
+                description="""
+`?settings`
+`?ar_add`
+`?ar_remove`
+`?ar_list`
+`?s`
+`?cs`
+                """,
+                color=discord.Color.dark_grey()
+            )
+
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+
+class HelpView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=120)
+        self.add_item(HelpDropdown())
+
+
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(
+        title="📖 Jerry Help",
+        description="""
+Prefix: `?`
+
+Wähle unten ein Modul aus,
+um alle Commands zu sehen.
+        """,
+        color=discord.Color.blurple()
+    )
+
+    await ctx.send(embed=embed, view=HelpView())
         
 @bot.event
 async def on_ready():
