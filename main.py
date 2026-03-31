@@ -115,18 +115,4 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send("🏓 Pong!")
 
-@bot.command()
-async def help(ctx):
-    embed = discord.Embed(
-        title="📖 Help Menü",
-        description="Wähle unten eine Kategorie 👇",
-        color=discord.Color.blurple()
-    )
-
-    embed.add_field(name="🛠️ Moderation", value="Ban, Timeout...", inline=False)
-    embed.add_field(name="👤 User", value="Avatar, Stats...", inline=False)
-    embed.add_field(name="🎮 Fun", value="Fun Commands", inline=False)
-
-    await ctx.send(embed=embed, view=HelpView())
-
 bot.run(TOKEN)
