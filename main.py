@@ -106,6 +106,44 @@ um alle Commands zu sehen.
     )
 
     await ctx.send(embed=embed, view=HelpView())
+
+@bot.event
+async def on_command_error(ctx, error):
+
+    # ❌ Keine Rechte
+    if isinstance(error, commands.MissingPermissions):
+        embed = discord.Embed(
+            title="❌ Keine Rechte",
+            description="Du darfst diesen Command nicht nutzen.",
+            color=discord.Color.red()
+        )
+        return await ctx.send(embed=embed)
+
+    # ⚠️ Falsche Nutzung (z.B. Argument fehlt)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        embed = discord.Embed(
+            title="⚠️ Falsche Nutzung",
+            description=f"Nutze den Command so:\n`?{ctx.command} {ctx.command.signature}`",
+            color=discord.Color.orange()
+        )
+        return await ctx.send(embed=embed)
+
+    # ❌ Falscher Input
+    elif isinstance(error, commands.BadArgument):
+        embed = discord.Embed(
+            title="❌ Ungültige Eingabe",
+            description="Bitte überprüfe deine Eingabe.",
+            color=discord.Color.red()
+        )
+        return await ctx.send(embed=embed)
+
+    # ❌ Command existiert nicht
+    elif isinstance(error, commands.CommandNotFound):
+        return
+
+    # 💥 Sonstige Errors (Debug)
+    else:
+        print(error)
         
 @bot.event
 async def on_ready():
