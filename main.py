@@ -115,4 +115,61 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send("🏓 Pong!")
 
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason="Kein Grund angegeben"):
+    try:
+        await member.send(f"🔨 Du wurdest gebannt\nServer: {ctx.guild.name}\nGrund: {reason}")
+    except:
+        pass
+
+    await member.ban(reason=reason)
+
+    embed = discord.Embed(
+        title="🔨 User gebannt",
+        description=f"{member.mention} wurde gebannt\nGrund: {reason}",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, user_id: int):
+    user = await bot.fetch_user(user_id)
+    await ctx.guild.unban(user)
+
+    embed = discord.Embed(
+        title="♻️ User entbannt",
+        description=f"{user} wurde entbannt",
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, minutes: int):
+    duration = discord.utils.utcnow() + timedelta(minutes=minutes)
+    await member.timeout(duration)
+
+    embed = discord.Embed(
+        title="🔇 Timeout",
+        description=f"{member.mention} für {minutes} Minuten",
+        color=discord.Color.orange()
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def untimeout(ctx, member: discord.Member):
+    await member.timeout(None)
+
+    embed = discord.Embed(
+        title="🔊 Timeout entfernt",
+        description=f"{member.mention} ist wieder frei",
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed)
+
 bot.run(TOKEN)
