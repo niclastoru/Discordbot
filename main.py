@@ -19,6 +19,16 @@ bot = commands.Bot(
 async def on_ready():
     print(f"🔥 {bot.user} is online")
 
+# ================= LOAD COGS =================
+
+@bot.event
+async def setup_hook():
+    for file in os.listdir("./cogs"):
+        if file.endswith(".py"):
+            await bot.load_extension(f"cogs.{file[:-3]}")
+
+# ================= ERROR SYSTEM =================
+
 @bot.event
 async def on_command_error(ctx, error):
 
@@ -49,7 +59,7 @@ async def on_command_error(ctx, error):
     else:
         print(error)
 
-# ================= PING TEST =================
+# ================= PING =================
 
 @bot.command()
 async def ping(ctx):
