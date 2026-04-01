@@ -198,8 +198,10 @@ class Moderation(commands.Cog):
         jail_data[guild_id]["jailed_users"][str(member.id)] = roles
         save_jail(jail_data)
 
-        # Rollen entfernen + Jail Rolle setzen
-        await member.edit(roles=[jail_role])
+        try:
+            await member.edit(roles=[jail_role])
+        except Exception as e:
+            return await ctx.send(f"❌ Error:\n```{e}```")
 
         # DM
         try:
@@ -212,7 +214,7 @@ class Moderation(commands.Cog):
             description=f"{member.mention} is now jailed",
             color=discord.Color.red()
         ))
-
+    
     # ================= UNJAIL =================
 
     @commands.command()
