@@ -25,8 +25,12 @@ async def on_ready():
 async def setup_hook():
     for file in os.listdir("./cogs"):
         if file.endswith(".py"):
-            await bot.load_extension(f"cogs.{file[:-3]}")
-
+            try:
+                await bot.load_extension(f"cogs.{file[:-3]}")
+                print(f"✅ Loaded cog: {file}")
+            except Exception as e:
+                print(f"❌ Failed to load {file}: {e}")
+                
 # ================= ERROR SYSTEM =================
 
 @bot.event
