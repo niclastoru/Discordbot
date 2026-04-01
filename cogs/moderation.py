@@ -24,29 +24,40 @@ class Moderation(commands.Cog):
         self.bot = bot
 
     # ================= BAN =================
+@commands.command()
+@commands.has_permissions(ban_members=True)
+async def ban(self, ctx, user: str, *, reason="No reason provided"):
 
-    @commands.command()
-    @commands.has_permissions(ban_members=True)
-    async def ban(self, ctx, user: str, *, reason="No reason provided"):
+    try:
+        if user.isdigit():
+            user = await self.bot.fetch_user(int(user))
+        else:
+            user = ctx.message.mentions[0]
+
+        # DM vorher
         try:
-            if user.isdigit():
-                user = await self.bot.fetch_user(int(user))
-            else:
-                user = ctx.message.mentions[0]
-
-            await ctx.guild.ban(user, reason=reason)
-
             embed = discord.Embed(
-                title="🔨 User Banned",
-                description=f"{user} was banned\nReason: {reason}",
+                title="🔨 You were banned",
+                description=f"Server: {ctx.guild.name}\nReason: {reason}",
                 color=discord.Color.red()
             )
-
-            await ctx.send(embed=embed)
-
+            await user.send(embed=embed)
         except:
-            await ctx.send("❌ Invalid user")
+            pass  # DM blocked
 
+        await ctx.guild.ban(user, reason=reason)
+
+        await ctx.send(embed=discord.Embed(
+            title="🔨 User Banned",
+            description=f"{user} was banned\nReason: {reason}",
+            color=discord.Color.red()
+        ))
+
+    except:
+        await ctx.send("❌ Invalid user")
+
+
+  
     # ================= UNBAN =================
 
     @commands.command()
@@ -68,60 +79,67 @@ class Moderation(commands.Cog):
             await ctx.send("❌ Invalid ID")
 
     # ================= TIMEOUT =================
+@commands.command()
+@commands.has_permissions(moderate_members=True)
+async def timeout(self, ctx, user: str, duration: str):
 
-    @commands.command()
-    @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx, user: str, duration: str):
+    delta = parse_time(duration)
 
-        delta = parse_time(duration)
+    if not delta:
+        return await ctx.send("❌ Invalid time format (10m, 1h, 1d)")
 
-        if not delta:
-            return await ctx.send("❌ Invalid time format (use: 10m, 1h, 1d)")
+    try:
+        if user.isdigit():
+            member = await ctx.guild.fetch_member(int(user))
+        else:
+            member = ctx.message.mentions[0]
 
+        # DM vorher
         try:
-            if user.isdigit():
-                member = await ctx.guild.fetch_member(int(user))
-            else:
-                member = ctx.message.mentions[0]
-
-            await member.timeout(delta)
-
             embed = discord.Embed(
-                title="🔇 User Timed Out",
-                description=f"{member.mention} for {duration}",
+                title="🔇 You were timed out",
+                description=f"Server: {ctx.guild.name}\nDuration: {duration}",
                 color=discord.Color.orange()
             )
-
-            await ctx.send(embed=embed)
-
+            await member.send(embed=embed)
         except:
-            await ctx.send("❌ Invalid user")
+            pass
+
+        await member.timeout(delta)
+
+        await ctx.send(embed=discord.Embed(
+            title="🔇 User Timed Out",
+            description=f"{member.mention} for {duration}",
+            color=discord.Color.orange()
+        ))
+
+    except:
+        await ctx.send("❌ Invalid user")
 
     # ================= UNTIMEOUT =================
+@commands.command()
+@commands.has_permissions(moderate_members=True)
+async def untimeout(self, ctx, user: str):
 
-    @commands.command()
-    @commands.has_permissions(moderate_members=True)
-    async def untimeout(self, ctx, user: str):
+    try:
+        if user.isdigit():
+            member = await ctx.guild.fetch_member(int(user))
+        else:
+            member = ctx.message.mentions[0]
+
+        await member.timeout(None)
 
         try:
-            if user.isdigit():
-                member = await ctx.guild.fetch_member(int(user))
-            else:
-                member = ctx.message.mentions[0]
-
-            await member.timeout(None)
-
-            embed = discord.Embed(
-                title="🔊 Timeout Removed",
-                description=f"{member.mention} is now free",
-                color=discord.Color.green()
-            )
-
-            await ctx.send(embed=embed)
-
+            await member.send("🔊 Your timeout has been removed.")
         except:
-            await ctx.send("❌ Invalid user")
+            pass
 
+        await ctx.send(embed=discord.Embed(
+            title="🔊 Timeout Removed",
+            description=f"{member.mention} is now free",
+            color=discord.Color.green()
+        ))
 
-async def setup(bot):
-    await bot.add_cog(Moderation(bot))
+    except:
+        await ctx.send("❌ Invalid user")
+  
