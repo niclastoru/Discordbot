@@ -23,7 +23,7 @@ staff_data = load_data()
 
 # ================= COG =================
 
-class Staff(commands.Cog):
+class Staff(commands.Cog, name="👑 Staff"):
     def __init__(self, bot):
         self.bot = bot
 
