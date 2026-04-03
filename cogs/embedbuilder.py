@@ -19,7 +19,6 @@ def save_data(data):
 embed_data = load_data()
 
 
-# ================= BUILD =================
 def build_embed(data):
     embed = discord.Embed(
         title=data["title"],
@@ -45,89 +44,6 @@ def build_embed(data):
     return embed
 
 
-# ================= DROPDOWN =================
-class EditorDropdown(discord.ui.Select):
-    def __init__(self, editor):
-        self.editor = editor
-
-        options = [
-            discord.SelectOption(label="Edit Title"),
-            discord.SelectOption(label="Edit Description"),
-            discord.SelectOption(label="Edit Color"),
-            discord.SelectOption(label="Edit Image"),
-            discord.SelectOption(label="Edit Thumbnail"),
-            discord.SelectOption(label="Edit Footer"),
-            discord.SelectOption(label="Add Field"),
-            discord.SelectOption(label="Clear Fields"),
-        ]
-
-        super().__init__(
-            placeholder="Select what to edit",
-            options=options
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-
-        def check(m):
-            return m.author == interaction.user and m.channel == interaction.channel
-
-        choice = self.values[0]
-        data = self.editor.get_data()
-
-        if choice == "Edit Title":
-            await interaction.followup.send("Send title")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            data["title"] = msg.content
-
-        elif choice == "Edit Description":
-            await interaction.followup.send("Send description")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            data["description"] = msg.content
-
-        elif choice == "Edit Color":
-            await interaction.followup.send("Send hex (#ff0000)")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            try:
-                data["color"] = int(msg.content.replace("#", ""), 16)
-            except:
-                return await interaction.followup.send("Invalid color")
-
-        elif choice == "Edit Image":
-            await interaction.followup.send("Send image URL")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            data["image"] = msg.content
-
-        elif choice == "Edit Thumbnail":
-            await interaction.followup.send("Send thumbnail URL")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            data["thumbnail"] = msg.content
-
-        elif choice == "Edit Footer":
-            await interaction.followup.send("Send footer")
-            msg = await self.editor.bot.wait_for("message", check=check)
-            data["footer"] = msg.content
-
-        elif choice == "Add Field":
-            await interaction.followup.send("Field title?")
-            title = await self.editor.bot.wait_for("message", check=check)
-
-            await interaction.followup.send("Field value?")
-            value = await self.editor.bot.wait_for("message", check=check)
-
-            data["fields"].append({
-                "name": title.content,
-                "value": value.content
-            })
-
-        elif choice == "Clear Fields":
-            data["fields"] = []
-
-        save_data(embed_data)
-        await self.editor.refresh(interaction)
-
-
-# ================= VIEW =================
 class EmbedEditor(discord.ui.View):
     def __init__(self, bot, guild_id, name):
         super().__init__(timeout=300)
@@ -135,22 +51,67 @@ class EmbedEditor(discord.ui.View):
         self.guild_id = guild_id
         self.name = name
 
-        self.add_item(EditorDropdown(self))
-
     def get_data(self):
         return embed_data[self.guild_id][self.name]
 
-    async def refresh(self, interaction):
+    async def update(self, interaction):
         embed = build_embed(self.get_data())
-        await interaction.message.edit(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self)
 
+    # ===== TITLE =====
+    @discord.ui.button(label="Title", style=discord.ButtonStyle.primary)
+    async def title(self, interaction, button):
+        await interaction.response.send_message("Send new title", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        self.get_data()["title"] = msg.content
+        save_data(embed_data)
+
+        await interaction.followup.send("✅ Updated", ephemeral=True)
+
+    # ===== DESCRIPTION =====
+    @discord.ui.button(label="Description", style=discord.ButtonStyle.primary)
+    async def desc(self, interaction, button):
+        await interaction.response.send_message("Send description", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        self.get_data()["description"] = msg.content
+        save_data(embed_data)
+
+        await interaction.followup.send("✅ Updated", ephemeral=True)
+
+    # ===== COLOR =====
+    @discord.ui.button(label="Color", style=discord.ButtonStyle.secondary)
+    async def color(self, interaction, button):
+        await interaction.response.send_message("Send hex (#ff0000)", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        try:
+            self.get_data()["color"] = int(msg.content.replace("#", ""), 16)
+            save_data(embed_data)
+            await interaction.followup.send("✅ Updated", ephemeral=True)
+        except:
+            await interaction.followup.send("❌ Invalid", ephemeral=True)
+
+    # ===== SEND =====
     @discord.ui.button(label="Send", style=discord.ButtonStyle.green)
-    async def send(self, interaction, button):
+    async def send_embed(self, interaction, button):
         await interaction.channel.send(embed=build_embed(self.get_data()))
         await interaction.response.send_message("✅ Sent", ephemeral=True)
 
 
-# ================= COG =================
 class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
     def __init__(self, bot):
         self.bot = bot
@@ -200,6 +161,5 @@ class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
         await ctx.send(embed=embed, view=view)
 
 
-# ================= SETUP =================
 async def setup(bot):
     await bot.add_cog(EmbedBuilder(bot))
