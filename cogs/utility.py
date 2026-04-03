@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+
 class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -17,6 +18,23 @@ class Utility(commands.Cog):
         embed.set_image(url=member.display_avatar.url)
 
         await ctx.send(embed=embed)
+
+    # ================= BANNER =================
+    @commands.command()
+    async def banner(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+
+        user = await self.bot.fetch_user(member.id)
+
+        if user.banner:
+            embed = discord.Embed(
+                title=f"{member.name}'s Banner",
+                color=discord.Color.blurple()
+            )
+            embed.set_image(url=user.banner.url)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("❌ This user has no banner")
 
     # ================= USER INFO =================
     @commands.command()
@@ -61,23 +79,6 @@ class Utility(commands.Cog):
         )
 
         await ctx.send(embed=embed)
-
-# ================= BANNER =================
-@commands.command()
-async def banner(self, ctx, member: discord.Member = None):
-    member = member or ctx.author
-
-    user = await self.bot.fetch_user(member.id)
-
-    if user.banner:
-        embed = discord.Embed(
-            title=f"{member.name}'s Banner",
-            color=discord.Color.blurple()
-        )
-        embed.set_image(url=user.banner.url)
-        await ctx.send(embed=embed)
-    else:
-        await ctx.send("❌ This user has no banner")
 
 
 # ================= SETUP =================
