@@ -5,7 +5,7 @@ import os
 
 print("✅ STAFF COG LOADED")
 
-FILE = "staff.json"
+FILE = "/data/staff.json"
 
 # ================= LOAD =================
 def load_data():
