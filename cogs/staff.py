@@ -3,18 +3,23 @@ from discord.ext import commands
 import json
 import os
 
+print("✅ STAFF COG LOADED")
+
 FILE = "staff.json"
 
-# ================= LOAD / SAVE =================
-
+# ================= LOAD =================
 def load_data():
-    if not os.path.exists(FILE):
-        with open(FILE, "w") as f:
-            json.dump({}, f)
+    try:
+        if not os.path.exists(FILE):
+            with open(FILE, "w") as f:
+                json.dump({}, f)
 
-    with open(FILE, "r") as f:
-        return json.load(f)
+        with open(FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
 
+# ================= SAVE =================
 def save_data(data):
     with open(FILE, "w") as f:
         json.dump(data, f, indent=4)
@@ -22,16 +27,14 @@ def save_data(data):
 staff_data = load_data()
 
 # ================= COG =================
-
-class Staff(commands.Cog, name="👑 Staff"):
+class Staff(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ================= SETTINGS STAFF =================
-
+    # ================= STAFF COMMAND =================
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def staff(self, ctx, action=None, role: discord.Role = None):
+    async def staff(self, ctx, action: str = None, role: discord.Role = None):
 
         guild_id = str(ctx.guild.id)
 
@@ -39,7 +42,7 @@ class Staff(commands.Cog, name="👑 Staff"):
         if guild_id not in staff_data:
             staff_data[guild_id] = []
 
-        # ================= ADD =================
+        # ===== ADD =====
         if action == "add" and role:
 
             if role.id in staff_data[guild_id]:
@@ -54,7 +57,7 @@ class Staff(commands.Cog, name="👑 Staff"):
                 color=discord.Color.green()
             ))
 
-        # ================= REMOVE =================
+        # ===== REMOVE =====
         elif action == "remove" and role:
 
             if role.id not in staff_data[guild_id]:
@@ -69,11 +72,10 @@ class Staff(commands.Cog, name="👑 Staff"):
                 color=discord.Color.orange()
             ))
 
-        # ================= LIST =================
+        # ===== LIST =====
         elif action == "list":
 
             roles = [ctx.guild.get_role(r) for r in staff_data[guild_id]]
-
             text = "\n".join([r.mention for r in roles if r]) or "No roles set"
 
             return await ctx.send(embed=discord.Embed(
@@ -82,25 +84,27 @@ class Staff(commands.Cog, name="👑 Staff"):
                 color=discord.Color.blurple()
             ))
 
+        # ===== HELP =====
         else:
-            return await ctx.send(
-                "Usage:\n"
-                "`?staff add @role`\n"
-                "`?staff remove @role`\n"
-                "`?staff list`"
-            )
+            return await ctx.send(embed=discord.Embed(
+                title="⚙️ Staff Setup",
+                description="""
+`?staff add @role`
+`?staff remove @role`
+`?staff list`
+""",
+                color=discord.Color.blurple()
+            ))
 
-# ================= CHECK FUNCTION =================
+    # ================= STAFF CHECK =================
+    def is_staff(self, member):
+        guild_id = str(member.guild.id)
 
-def is_staff(member):
-    guild_id = str(member.guild.id)
+        if guild_id not in staff_data:
+            return False
 
-    if guild_id not in staff_data:
-        return False
-
-    return any(role.id in staff_data[guild_id] for role in member.roles)
+        return any(role.id in staff_data[guild_id] for role in member.roles)
 
 # ================= SETUP =================
-
 async def setup(bot):
     await bot.add_cog(Staff(bot))
