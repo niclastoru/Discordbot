@@ -5,8 +5,8 @@ class Ticket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.staff_role = None
-        self.log_channel = None
         self.category = None
+        self.log_channel = None
         self.tickets = {}
 
     # ================= PANEL =================
@@ -15,111 +15,122 @@ class Ticket(commands.Cog):
     async def panel(self, ctx):
 
         embed = discord.Embed(
-            title="🎫 Support",
-            description="Klicke unten um ein Ticket zu öffnen",
-            color=discord.Color.blue()
+            title="Support Center",
+            description="Select a category below to open a ticket.",
+            color=discord.Color.dark_grey()
         )
 
-        button = discord.ui.Button(label="Ticket öffnen", style=discord.ButtonStyle.primary)
-
-        async def create_ticket(interaction):
-            user = interaction.user
-
-            if user.id in self.tickets:
-                return await interaction.response.send_message("Du hast schon ein Ticket!", ephemeral=True)
-
-            overwrites = {
-                interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                user: discord.PermissionOverwrite(view_channel=True, send_messages=True)
-            }
-
-            if self.staff_role:
-                overwrites[self.staff_role] = discord.PermissionOverwrite(view_channel=True)
-
-            channel = await interaction.guild.create_text_channel(
-                name=f"ticket-{user.name}",
-                overwrites=overwrites,
-                category=self.category
-            )
-
-            self.tickets[user.id] = channel.id
-
-            await interaction.response.send_message(f"Ticket erstellt: {channel}", ephemeral=True)
-
-            view = discord.ui.View()
-
-            # CLAIM
-            async def claim_btn(i):
-                await i.response.send_message(f"{i.user.mention} hat das Ticket übernommen")
-
-            # CLOSE
-            async def close_btn(i):
-                await i.response.send_message("Ticket wird geschlossen...")
-
-                if self.log_channel:
-                    messages = [msg async for msg in i.channel.history(limit=50)]
-                    transcript = "\n".join([f"{m.author}: {m.content}" for m in messages])
-
-                    await self.log_channel.send(f"```{transcript}```")
-
-                await i.channel.delete()
-
-            # RENAME
-            async def rename_btn(i):
-                await i.response.send_message("Schreib den neuen Namen:", ephemeral=True)
-
-                def check(m):
-                    return m.author == i.user and m.channel == i.channel
-
-                msg = await self.bot.wait_for("message", check=check)
-                await i.channel.edit(name=msg.content)
-
-            view.add_item(discord.ui.Button(label="📌 Claim", style=discord.ButtonStyle.secondary, custom_id="claim"))
-            view.add_item(discord.ui.Button(label="✏️ Rename", style=discord.ButtonStyle.primary, custom_id="rename"))
-            view.add_item(discord.ui.Button(label="🔒 Close", style=discord.ButtonStyle.danger, custom_id="close"))
-
-            view.children[0].callback = claim_btn
-            view.children[1].callback = rename_btn
-            view.children[2].callback = close_btn
-
-            await channel.send(f"{user.mention} dein Ticket", view=view)
-
-        view = discord.ui.View()
-        button.callback = create_ticket
-        view.add_item(button)
-
+        view = TicketPanel(self)
         await ctx.send(embed=embed, view=view)
 
-    # ================= SET STAFF =================
+    # ================= SETUP =================
     @commands.command()
     async def setstaff(self, ctx, role: discord.Role):
         self.staff_role = role
-        await ctx.send("Staff Rolle gesetzt")
+        await ctx.send("Staff role set.")
 
-    # ================= SET LOG =================
-    @commands.command()
-    async def setlog(self, ctx, channel: discord.TextChannel):
-        self.log_channel = channel
-        await ctx.send("Log Channel gesetzt")
-
-    # ================= SET CATEGORY =================
     @commands.command()
     async def setcategory(self, ctx, category: discord.CategoryChannel):
         self.category = category
-        await ctx.send("Kategorie gesetzt")
+        await ctx.send("Category set.")
 
-    # ================= USER ADD =================
+    @commands.command()
+    async def setlog(self, ctx, channel: discord.TextChannel):
+        self.log_channel = channel
+        await ctx.send("Log channel set.")
+
     @commands.command()
     async def useradd(self, ctx, member: discord.Member):
         await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
-        await ctx.send(f"{member.mention} hinzugefügt")
+        await ctx.send(f"{member.mention} added.")
 
-    # ================= USER REMOVE =================
     @commands.command()
     async def userremove(self, ctx, member: discord.Member):
         await ctx.channel.set_permissions(member, overwrite=None)
-        await ctx.send(f"{member.mention} entfernt")
+        await ctx.send(f"{member.mention} removed.")
 
 
+# ================= PANEL VIEW =================
+class TicketPanel(discord.ui.View):
+    def __init__(self, cog):
+        super().__init__(timeout=None)
+        self.cog = cog
+
+    @discord.ui.select(
+        placeholder="Choose a category...",
+        options=[
+            discord.SelectOption(label="Support", description="Get help", emoji="🎫"),
+            discord.SelectOption(label="Admin", description="Contact staff", emoji="⚙️")
+        ]
+    )
+    async def select_callback(self, interaction: discord.Interaction, select):
+
+        user = interaction.user
+
+        if user.id in self.cog.tickets:
+            return await interaction.response.send_message("You already have a ticket.", ephemeral=True)
+
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        }
+
+        if self.cog.staff_role:
+            overwrites[self.cog.staff_role] = discord.PermissionOverwrite(view_channel=True)
+
+        channel = await interaction.guild.create_text_channel(
+            name=f"{select.values[0].lower()}-{user.name}",
+            overwrites=overwrites,
+            category=self.cog.category
+        )
+
+        self.cog.tickets[user.id] = channel.id
+
+        embed = discord.Embed(
+            description="Please describe your issue clearly.\nA staff member will assist you shortly.",
+            color=discord.Color.dark_grey()
+        )
+
+        view = TicketButtons(self.cog)
+
+        await channel.send(content=user.mention, embed=embed, view=view)
+        await interaction.response.send_message(f"Ticket created: {channel}", ephemeral=True)
+
+
+# ================= BUTTONS =================
+class TicketButtons(discord.ui.View):
+    def __init__(self, cog):
+        super().__init__(timeout=None)
+        self.cog = cog
+
+    @discord.ui.button(label="Claim", style=discord.ButtonStyle.secondary)
+    async def claim(self, interaction: discord.Interaction, button):
+        await interaction.response.send_message(f"{interaction.user.mention} claimed this ticket.")
+
+    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary)
+    async def rename(self, interaction: discord.Interaction, button):
+
+        await interaction.response.send_message("Send new name in chat.", ephemeral=True)
+
+        def check(m):
+            return m.author == interaction.user and m.channel == interaction.channel
+
+        msg = await self.cog.bot.wait_for("message", check=check)
+        await interaction.channel.edit(name=msg.content)
+
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger)
+    async def close(self, interaction: discord.Interaction, button):
+
+        await interaction.response.send_message("Closing ticket...")
+
+        if self.cog.log_channel:
+            messages = [msg async for msg in interaction.channel.history(limit=50)]
+            transcript = "\n".join([f"{m.author}: {m.content}" for m in messages])
+            await self.cog.log_channel.send(f"```{transcript}```")
+
+        await interaction.channel.delete()
+
+
+# ================= LOAD =================
 async def setup(bot):
     await bot.add_cog(Ticket(bot))
