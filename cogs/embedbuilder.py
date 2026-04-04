@@ -10,7 +10,6 @@ def load_data():
     if not os.path.exists(FILE):
         with open(FILE, "w") as f:
             json.dump({}, f)
-
     with open(FILE, "r") as f:
         return json.load(f)
 
@@ -24,62 +23,48 @@ embed_data = load_data()
 
 # ================= BUILD =================
 def build_embed(data):
-    return discord.Embed(
+    embed = discord.Embed(
         title=data.get("title") or "No Title",
         description=data.get("description") or "No Description",
         color=data.get("color", 0x5865F2)
     )
 
+    if data.get("image"):
+        embed.set_image(url=data["image"])
+
+    if data.get("thumbnail"):
+        embed.set_thumbnail(url=data["thumbnail"])
+
+    if data.get("footer"):
+        embed.set_footer(text=data["footer"])
+
+    if data.get("author"):
+        embed.set_author(name=data["author"])
+
+    return embed
+
 
 # ================= VIEW =================
 class EmbedEditor(discord.ui.View):
-    def __init__(self, bot, guild_id, name):
-        super().__init__(timeout=300)
+    def __init__(self, bot, gid, name):
+        super().__init__(timeout=None)
         self.bot = bot
-        self.guild_id = guild_id
+        self.gid = gid
         self.name = name
 
-    def get_data(self):
-        return embed_data[self.guild_id][self.name]
+    def data(self):
+        return embed_data[self.gid][self.name]
 
-    async def update_embed(self, interaction):
-        embed = build_embed(self.get_data())
-        await interaction.response.edit_message(embed=embed, view=self)
-
-    # ===== TITLE =====
-    @discord.ui.button(label="Title", style=discord.ButtonStyle.primary)
-    async def title(self, interaction, button):
-        await interaction.response.send_message("Send new title", ephemeral=True)
-
-        msg = await self.bot.wait_for(
-            "message",
-            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+    async def refresh(self, interaction):
+        await interaction.response.edit_message(
+            embed=build_embed(self.data()),
+            view=self
         )
 
-        self.get_data()["title"] = msg.content
-        save_data(embed_data)
-
-        await interaction.followup.send("✅ Updated", ephemeral=True)
-
-    # ===== DESCRIPTION =====
-    @discord.ui.button(label="Description", style=discord.ButtonStyle.primary)
-    async def desc(self, interaction, button):
-        await interaction.response.send_message("Send new description", ephemeral=True)
-
-        msg = await self.bot.wait_for(
-            "message",
-            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
-        )
-
-        self.get_data()["description"] = msg.content
-        save_data(embed_data)
-
-        await interaction.followup.send("✅ Updated", ephemeral=True)
-
-    # ===== COLOR =====
-    @discord.ui.button(label="Color", style=discord.ButtonStyle.secondary)
-    async def color(self, interaction, button):
-        await interaction.response.send_message("Send hex color (#ff0000)", ephemeral=True)
+    # ========= BASIC =========
+    @discord.ui.button(label="Edit Basic", style=discord.ButtonStyle.primary)
+    async def basic(self, interaction, button):
+        await interaction.response.send_message("Send: title | description", ephemeral=True)
 
         msg = await self.bot.wait_for(
             "message",
@@ -87,17 +72,83 @@ class EmbedEditor(discord.ui.View):
         )
 
         try:
-            self.get_data()["color"] = int(msg.content.replace("#", ""), 16)
+            title, desc = msg.content.split("|", 1)
+            self.data()["title"] = title.strip()
+            self.data()["description"] = desc.strip()
             save_data(embed_data)
-            await interaction.followup.send("✅ Updated", ephemeral=True)
+            await self.refresh(interaction)
+        except:
+            await interaction.followup.send("❌ Format: title | description", ephemeral=True)
+
+    # ========= AUTHOR =========
+    @discord.ui.button(label="Edit Author", style=discord.ButtonStyle.secondary)
+    async def author(self, interaction, button):
+        await interaction.response.send_message("Send author name", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        self.data()["author"] = msg.content
+        save_data(embed_data)
+        await self.refresh(interaction)
+
+    # ========= FOOTER =========
+    @discord.ui.button(label="Edit Footer", style=discord.ButtonStyle.secondary)
+    async def footer(self, interaction, button):
+        await interaction.response.send_message("Send footer", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        self.data()["footer"] = msg.content
+        save_data(embed_data)
+        await self.refresh(interaction)
+
+    # ========= MEDIA =========
+    @discord.ui.button(label="Edit Images", style=discord.ButtonStyle.secondary)
+    async def images(self, interaction, button):
+        await interaction.response.send_message("Send: image_url | thumbnail_url", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        try:
+            img, thumb = msg.content.split("|", 1)
+            self.data()["image"] = img.strip()
+            self.data()["thumbnail"] = thumb.strip()
+            save_data(embed_data)
+            await self.refresh(interaction)
+        except:
+            await interaction.followup.send("❌ Format: image | thumbnail", ephemeral=True)
+
+    # ========= COLOR =========
+    @discord.ui.button(label="Color", style=discord.ButtonStyle.secondary)
+    async def color(self, interaction, button):
+        await interaction.response.send_message("Send hex (#ff0000)", ephemeral=True)
+
+        msg = await self.bot.wait_for(
+            "message",
+            check=lambda m: m.author == interaction.user and m.channel == interaction.channel
+        )
+
+        try:
+            self.data()["color"] = int(msg.content.replace("#", ""), 16)
+            save_data(embed_data)
+            await self.refresh(interaction)
         except:
             await interaction.followup.send("❌ Invalid color", ephemeral=True)
 
-    # ===== SEND =====
+    # ========= SEND =========
     @discord.ui.button(label="Send", style=discord.ButtonStyle.green)
     async def send_embed(self, interaction, button):
-        await interaction.channel.send(embed=build_embed(self.get_data()))
-        await interaction.response.send_message("✅ Sent", ephemeral=True)
+        await interaction.channel.send(embed=build_embed(self.data()))
+        await interaction.response.defer()
 
 
 # ================= COG =================
@@ -105,26 +156,25 @@ class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
     def __init__(self, bot):
         self.bot = bot
 
-    # ===== CREATE =====
     @commands.command()
     async def embed_create(self, ctx, name: str):
         gid = str(ctx.guild.id)
 
         embed_data.setdefault(gid, {})
 
-        if name in embed_data[gid]:
-            return await ctx.send("❌ Already exists")
-
         embed_data[gid][name] = {
             "title": None,
             "description": None,
-            "color": 0x5865F2
+            "color": 0x5865F2,
+            "image": None,
+            "thumbnail": None,
+            "footer": None,
+            "author": None
         }
 
         save_data(embed_data)
         await ctx.send(f"✅ Created `{name}`")
 
-    # ===== DELETE =====
     @commands.command()
     async def embed_delete(self, ctx, name: str):
         gid = str(ctx.guild.id)
@@ -137,7 +187,6 @@ class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
 
         await ctx.send("🗑️ Deleted")
 
-    # ===== SHOW =====
     @commands.command()
     async def embed_show(self, ctx, name: str):
         gid = str(ctx.guild.id)
@@ -145,12 +194,13 @@ class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
         if name not in embed_data.get(gid, {}):
             return await ctx.send("❌ Not found")
 
-        embed = build_embed(embed_data[gid][name])
         view = EmbedEditor(self.bot, gid, name)
 
-        await ctx.send(embed=embed, view=view)
+        await ctx.send(
+            embed=build_embed(embed_data[gid][name]),
+            view=view
+        )
 
-    # ===== LIST =====
     @commands.command()
     async def embed_list(self, ctx):
         gid = str(ctx.guild.id)
@@ -158,17 +208,14 @@ class EmbedBuilder(commands.Cog, name="🧩 Embeds"):
         if gid not in embed_data or not embed_data[gid]:
             return await ctx.send("❌ No embeds")
 
-        names = "\n".join(f"• {n}" for n in embed_data[gid].keys())
+        text = "\n".join(f"• {x}" for x in embed_data[gid])
 
-        embed = discord.Embed(
-            title="📋 Embed List",
-            description=names,
+        await ctx.send(embed=discord.Embed(
+            title="📋 Embeds",
+            description=text,
             color=discord.Color.blurple()
-        )
-
-        await ctx.send(embed=embed)
+        ))
 
 
-# ================= SETUP =================
 async def setup(bot):
     await bot.add_cog(EmbedBuilder(bot))
