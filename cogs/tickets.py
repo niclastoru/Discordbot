@@ -1,235 +1,196 @@
-import discord
-from discord.ext import commands
-import json
-import os
+const {
+    Client,
+    GatewayIntentBits,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    PermissionsBitField,
+    ChannelType,
+    EmbedBuilder
+} = require("discord.js");
 
-FILE = "/data/tickets.json"
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds]
+});
 
-def load():
-    if not os.path.exists(FILE):
-        with open(FILE, "w") as f:
-            json.dump({}, f)
-    with open(FILE, "r") as f:
-        return json.load(f)
+// CONFIG
+let staffRole = null;
+let logChannel = null;
+let ticketCategory = null;
 
-def save(d):
-    with open(FILE, "w") as f:
-        json.dump(d, f, indent=4)
+let tickets = new Map();
 
-data = load()
+// =======================
+// INTERACTIONS
+// =======================
 
+client.on("interactionCreate", async (interaction) => {
 
-# ================= CHECK =================
-def is_staff(member, gid):
-    return any(r.id in data.get(gid, {}).get("staff_roles", []) for r in member.roles)
+    // ================= PANEL SETUP =================
+    if (interaction.isChatInputCommand() && interaction.commandName === "panel") {
 
-def is_admin(member, gid):
-    return any(r.id in data.get(gid, {}).get("admin_roles", []) for r in member.roles)
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return interaction.reply({ content: "Nur Admins!", ephemeral: true });
+        }
 
+        const modal = new ModalBuilder()
+            .setCustomId("panel_setup")
+            .setTitle("Ticket Panel");
 
-# ================= MODAL =================
-class TicketModal(discord.ui.Modal, title="Create Ticket"):
-    reason = discord.ui.TextInput(label="Reason", style=discord.TextStyle.long)
+        const title = new TextInputBuilder()
+            .setCustomId("title")
+            .setLabel("Titel")
+            .setStyle(TextInputStyle.Short);
 
-    def __init__(self, ttype):
-        super().__init__()
-        self.ttype = ttype
+        const desc = new TextInputBuilder()
+            .setCustomId("desc")
+            .setLabel("Beschreibung")
+            .setStyle(TextInputStyle.Paragraph);
 
-    async def on_submit(self, interaction: discord.Interaction):
-        await create_ticket(interaction, self.ttype, self.reason.value)
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(title),
+            new ActionRowBuilder().addComponents(desc)
+        );
 
-
-# ================= PANEL =================
-class Panel(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="🎫 Support", style=discord.ButtonStyle.primary)
-    async def support(self, interaction, _):
-        await interaction.response.send_modal(TicketModal("support"))
-
-    @discord.ui.button(label="👑 Admin", style=discord.ButtonStyle.danger)
-    async def admin(self, interaction, _):
-        if not is_admin(interaction.user, str(interaction.guild.id)):
-            return await interaction.response.send_message("❌ Admin only", ephemeral=True)
-        await interaction.response.send_modal(TicketModal("admin"))
-
-
-# ================= CLOSE CONFIRM =================
-class CloseConfirm(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=30)
-
-    @discord.ui.button(label="Confirm Close", style=discord.ButtonStyle.danger)
-    async def confirm(self, interaction, _):
-        await close_ticket(interaction)
-
-
-# ================= TICKET VIEW =================
-class TicketView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Claim", style=discord.ButtonStyle.primary)
-    async def claim(self, interaction, _):
-
-        gid = str(interaction.guild.id)
-
-        if not is_staff(interaction.user, gid):
-            return await interaction.response.send_message("❌ No permission", ephemeral=True)
-
-        if interaction.channel.topic and "claimed" in interaction.channel.topic:
-            return await interaction.response.send_message("❌ Already claimed", ephemeral=True)
-
-        await interaction.channel.edit(topic=f"claimed:{interaction.user.id}")
-        await interaction.response.send_message(f"✅ Claimed by {interaction.user.mention}")
-
-    @discord.ui.button(label="Lock", style=discord.ButtonStyle.secondary)
-    async def lock(self, interaction, _):
-
-        if not interaction.channel.topic:
-            return
-
-        claimer = int(interaction.channel.topic.split(":")[1])
-
-        if interaction.user.id != claimer:
-            return await interaction.response.send_message("❌ Only claimer", ephemeral=True)
-
-        for m in interaction.channel.members:
-            if m.id != claimer:
-                await interaction.channel.set_permissions(m, send_messages=False)
-
-        await interaction.response.send_message("🔒 Locked")
-
-    @discord.ui.button(label="Add", style=discord.ButtonStyle.secondary)
-    async def add(self, interaction, _):
-
-        await interaction.response.send_message("Send user ID", ephemeral=True)
-
-        msg = await interaction.client.wait_for("message", check=lambda m: m.author == interaction.user)
-
-        user = await interaction.guild.fetch_member(int(msg.content))
-        await interaction.channel.set_permissions(user, read_messages=True, send_messages=True)
-
-        await interaction.followup.send(f"✅ Added {user.mention}")
-
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.danger)
-    async def close(self, interaction, _):
-        await interaction.response.send_message("⚠️ Confirm close", view=CloseConfirm(), ephemeral=True)
-
-
-# ================= CREATE =================
-async def create_ticket(interaction, ttype, reason):
-
-    guild = interaction.guild
-    user = interaction.user
-    gid = str(guild.id)
-
-    if gid not in data:
-        return await interaction.response.send_message("❌ Setup missing", ephemeral=True)
-
-    # LIMIT
-    for ch in guild.text_channels:
-        if str(user.id) in ch.name:
-            return await interaction.response.send_message("❌ Already have ticket", ephemeral=True)
-
-    category = guild.get_channel(data[gid]["category"])
-
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-        guild.me: discord.PermissionOverwrite(read_messages=True)
+        return interaction.showModal(modal);
     }
 
-    for r in data[gid].get("staff_roles", []):
-        role = guild.get_role(r)
-        if role:
-            overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+    // ================= SET STAFF =================
+    if (interaction.isChatInputCommand() && interaction.commandName === "setstaff") {
+        const role = interaction.options.getRole("role");
+        staffRole = role.id;
+        return interaction.reply(`✅ Staff Rolle: ${role}`);
+    }
 
-    channel = await guild.create_text_channel(
-        name=f"{ttype}-{user.name}".lower(),
-        category=category,
-        overwrites=overwrites
-    )
+    // ================= SET LOG =================
+    if (interaction.isChatInputCommand() && interaction.commandName === "setlog") {
+        const channel = interaction.options.getChannel("channel");
+        logChannel = channel.id;
+        return interaction.reply(`📜 Log Channel gesetzt`);
+    }
 
-    embed = discord.Embed(
-        title=f"{ttype.capitalize()} Ticket",
-        description=f"👤 {user.mention}\n📝 {reason}",
-        color=discord.Color.blurple()
-    )
+    // ================= SET CATEGORY =================
+    if (interaction.isChatInputCommand() && interaction.commandName === "setcategory") {
+        const channel = interaction.options.getChannel("channel");
+        ticketCategory = channel.id;
+        return interaction.reply(`📂 Kategorie gesetzt`);
+    }
 
-    await channel.send(embed=embed, view=TicketView())
-    await interaction.response.send_message(f"✅ {channel.mention}", ephemeral=True)
+    // ================= MODAL SUBMIT =================
+    if (interaction.isModalSubmit() && interaction.customId === "panel_setup") {
 
+        const title = interaction.fields.getTextInputValue("title");
+        const desc = interaction.fields.getTextInputValue("desc");
 
-# ================= CLOSE =================
-async def close_ticket(interaction):
+        const embed = new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(desc)
+            .setColor("Blurple");
 
-    channel = interaction.channel
-    gid = str(interaction.guild.id)
+        const btn = new ButtonBuilder()
+            .setCustomId("create_ticket")
+            .setLabel("🎫 Ticket öffnen")
+            .setStyle(ButtonStyle.Primary);
 
-    log_channel = interaction.guild.get_channel(data[gid].get("logs"))
+        const row = new ActionRowBuilder().addComponents(btn);
 
-    messages = []
-    async for m in channel.history(limit=200):
-        messages.append(f"{m.author}: {m.content}")
+        await interaction.channel.send({ embeds: [embed], components: [row] });
 
-    transcript = "\n".join(messages[::-1])
+        return interaction.reply({ content: "Panel erstellt", ephemeral: true });
+    }
 
-    file = discord.File(fp=bytes(transcript, "utf-8"), filename="transcript.txt")
+    // ================= BUTTONS =================
+    if (interaction.isButton()) {
 
-    if log_channel:
-        embed = discord.Embed(
-            title="📁 Ticket Closed",
-            description=f"{channel.name}",
-            color=discord.Color.red()
-        )
-        await log_channel.send(embed=embed, file=file)
+        // CREATE
+        if (interaction.customId === "create_ticket") {
 
-    await channel.delete()
+            if (tickets.has(interaction.user.id)) {
+                return interaction.reply({ content: "Du hast schon ein Ticket!", ephemeral: true });
+            }
 
+            const channel = await interaction.guild.channels.create({
+                name: `ticket-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                parent: ticketCategory || null,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    staffRole && {
+                        id: staffRole,
+                        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+                    }
+                ].filter(Boolean)
+            });
 
-# ================= COG =================
-class Tickets(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+            tickets.set(interaction.user.id, channel.id);
 
-    @commands.command()
-    async def ticketpanel(self, ctx):
-        await ctx.send(embed=discord.Embed(title="🎫 Ticket System"), view=Panel())
+            const buttons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("claim").setLabel("📌 Claim").setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId("close").setLabel("🔒 Close").setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId("rename").setLabel("✏️ Rename").setStyle(ButtonStyle.Primary)
+            );
 
-    @commands.command()
-    async def setticket(self, ctx, category: discord.CategoryChannel):
-        gid = str(ctx.guild.id)
-        data.setdefault(gid, {})
-        data[gid]["category"] = category.id
-        save(data)
-        await ctx.send("✅ Category set")
+            await channel.send({
+                content: `🎫 ${interaction.user} Ticket erstellt`,
+                components: [buttons]
+            });
 
-    @commands.command()
-    async def ticketlogs(self, ctx, channel: discord.TextChannel):
-        gid = str(ctx.guild.id)
-        data.setdefault(gid, {})
-        data[gid]["logs"] = channel.id
-        save(data)
-        await ctx.send("✅ Logs set")
+            return interaction.reply({ content: `Ticket: ${channel}`, ephemeral: true });
+        }
 
-    @commands.command()
-    async def ticketstaff(self, ctx, role: discord.Role):
-        gid = str(ctx.guild.id)
-        data.setdefault(gid, {})
-        data[gid].setdefault("staff_roles", []).append(role.id)
-        save(data)
-        await ctx.send("✅ Staff added")
+        // CLAIM
+        if (interaction.customId === "claim") {
+            await interaction.channel.send(`📌 ${interaction.user} hat das Ticket übernommen`);
+        }
 
-    @commands.command()
-    async def ticketadmin(self, ctx, role: discord.Role):
-        gid = str(ctx.guild.id)
-        data.setdefault(gid, {})
-        data[gid].setdefault("admin_roles", []).append(role.id)
-        save(data)
-        await ctx.send("✅ Admin added")
+        // RENAME
+        if (interaction.customId === "rename") {
 
+            const modal = new ModalBuilder()
+                .setCustomId("rename_modal")
+                .setTitle("Rename Ticket");
 
-async def setup(bot):
-    await bot.add_cog(Tickets(bot))
+            const input = new TextInputBuilder()
+                .setCustomId("name")
+                .setLabel("Neuer Name")
+                .setStyle(TextInputStyle.Short);
+
+            modal.addComponents(new ActionRowBuilder().addComponents(input));
+
+            return interaction.showModal(modal);
+        }
+
+        // CLOSE
+        if (interaction.customId === "close") {
+
+            const messages = await interaction.channel.messages.fetch({ limit: 100 });
+            let transcript = messages.map(m => `${m.author.tag}: ${m.content}`).join("\n");
+
+            if (logChannel) {
+                const log = interaction.guild.channels.cache.get(logChannel);
+                log.send(`📜 Transcript:\n\`\`\`\n${transcript}\n\`\`\``);
+            }
+
+            await interaction.reply("🔒 Ticket wird geschlossen");
+
+            setTimeout(() => interaction.channel.delete(), 2000);
+        }
+    }
+
+    // ================= MODAL RENAME =================
+    if (interaction.isModalSubmit() && interaction.customId === "rename_modal") {
+
+        const name = interaction.fields.getTextInputValue("name");
+        await interaction.channel.setName(name);
+
+        return interaction.reply({ content: "✅ Umbenannt", ephemeral: true });
+    }
+
+});
+
+// ================= LOGIN =================
+client.login("DEIN_TOKEN");
