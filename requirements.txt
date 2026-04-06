@@ -1,6 +1,1 @@
-discord.py
-requests
-Pillow
-yt-dlp
-ffmpeg
-PyNaCl
+
