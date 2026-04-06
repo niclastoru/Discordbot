@@ -161,11 +161,7 @@ class Utility(commands.Cog, name="🧰 Utility"):
         new = await ctx.guild.create_custom_emoji(name=emoji.name, image=await emoji.read())
         await ctx.send(f"✅ Added {new}")
 
-    # ================= HELP =================
-    @commands.command()
-    async def help(self, ctx):
-        await ctx.send("Use help system")
-
+    #
 # ================= SETUP =================
 async def setup(bot):
     await bot.add_cog(Utility(bot))
