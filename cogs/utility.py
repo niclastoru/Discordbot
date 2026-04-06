@@ -3,7 +3,7 @@ from discord.ext import commands
 import base64
 import asyncio
 
-class Utility(commands.Cog, name="🧰 Utility"):
+class Utility(commands.Cog, name="Utility"):
     def __init__(self, bot):
         self.bot = bot
         self.snipes = {}
