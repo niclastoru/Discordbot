@@ -5,12 +5,10 @@ import os
 
 FILE = "/data/voice.json"
 
-# ================= LOAD / SAVE =================
 def load():
     if not os.path.exists(FILE):
         with open(FILE, "w") as f:
             json.dump({}, f)
-
     with open(FILE, "r") as f:
         return json.load(f)
 
@@ -21,54 +19,57 @@ def save(d):
 data = load()
 
 # ================= CHECK =================
-def is_owner(user, channel):
-    return data.get(str(channel.id), {}).get("owner") == user.id
+def is_owner(user, vc):
+    return data.get(str(vc.id), {}).get("owner") == user.id
 
 
 # ================= MODALS =================
 
 class RenameModal(discord.ui.Modal, title="Rename Channel"):
-    name = discord.ui.TextInput(label="New Name")
+    name = discord.ui.TextInput(label="New Channel Name")
 
     def __init__(self, vc):
         super().__init__()
         self.vc = vc
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction):
         await self.vc.edit(name=self.name.value)
         await interaction.response.send_message("✅ Renamed", ephemeral=True)
 
 
-class BitrateModal(discord.ui.Modal, title="Set Bitrate"):
-    bitrate = discord.ui.TextInput(label="Bitrate (8000 - 96000)")
+class LimitModal(discord.ui.Modal, title="Set User Limit"):
+    limit = discord.ui.TextInput(label="User Limit (0 = unlimited)")
 
     def __init__(self, vc):
         super().__init__()
         self.vc = vc
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction):
         try:
-            b = int(self.bitrate.value)
-            await self.vc.edit(bitrate=b)
-            await interaction.response.send_message("✅ Bitrate updated", ephemeral=True)
+            limit = int(self.limit.value)
+            await self.vc.edit(user_limit=limit)
+            await interaction.response.send_message("✅ Limit updated", ephemeral=True)
         except:
-            await interaction.response.send_message("❌ Invalid bitrate", ephemeral=True)
+            await interaction.response.send_message("❌ Invalid number", ephemeral=True)
 
 
-class KickModal(discord.ui.Modal, title="Kick User"):
-    user_id = discord.ui.TextInput(label="User ID")
+# ================= USER SELECT =================
 
+class KickSelect(discord.ui.UserSelect):
     def __init__(self, vc):
-        super().__init__()
+        super().__init__(placeholder="Select user to kick", min_values=1, max_values=1)
         self.vc = vc
 
-    async def on_submit(self, interaction: discord.Interaction):
-        try:
-            member = await interaction.guild.fetch_member(int(self.user_id.value))
-            await member.move_to(None)
-            await interaction.response.send_message("👢 User kicked", ephemeral=True)
-        except:
-            await interaction.response.send_message("❌ Invalid ID", ephemeral=True)
+    async def callback(self, interaction):
+        member = self.values[0]
+        await member.move_to(None)
+        await interaction.response.send_message(f"👢 {member} kicked", ephemeral=True)
+
+
+class KickView(discord.ui.View):
+    def __init__(self, vc):
+        super().__init__(timeout=30)
+        self.add_item(KickSelect(vc))
 
 
 # ================= PANEL =================
@@ -85,7 +86,7 @@ class VoicePanel(discord.ui.View):
         return vc and is_owner(interaction.user, vc)
 
     # ===== ROW 1 =====
-    @discord.ui.button(label="🔒", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="🔒 Lock", style=discord.ButtonStyle.secondary, row=0, custom_id="lock")
     async def lock(self, interaction, _):
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
@@ -93,7 +94,7 @@ class VoicePanel(discord.ui.View):
         await vc.set_permissions(interaction.guild.default_role, connect=False)
         await interaction.response.send_message("🔒 Locked", ephemeral=True)
 
-    @discord.ui.button(label="🔓", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="🔓 Unlock", style=discord.ButtonStyle.secondary, row=0, custom_id="unlock")
     async def unlock(self, interaction, _):
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
@@ -101,7 +102,7 @@ class VoicePanel(discord.ui.View):
         await vc.set_permissions(interaction.guild.default_role, connect=True)
         await interaction.response.send_message("🔓 Unlocked", ephemeral=True)
 
-    @discord.ui.button(label="👻", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="👻 Hide", style=discord.ButtonStyle.secondary, row=0, custom_id="hide")
     async def hide(self, interaction, _):
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
@@ -109,8 +110,8 @@ class VoicePanel(discord.ui.View):
         await vc.set_permissions(interaction.guild.default_role, view_channel=False)
         await interaction.response.send_message("👻 Hidden", ephemeral=True)
 
-    @discord.ui.button(label="👁", style=discord.ButtonStyle.secondary, row=0)
-    async def reveal(self, interaction, _):
+    @discord.ui.button(label="👁 Show", style=discord.ButtonStyle.secondary, row=0, custom_id="show")
+    async def show(self, interaction, _):
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
         vc = self.get_vc(interaction)
@@ -118,64 +119,36 @@ class VoicePanel(discord.ui.View):
         await interaction.response.send_message("👁 Visible", ephemeral=True)
 
     # ===== ROW 2 =====
-    @discord.ui.button(label="🎤 Claim", style=discord.ButtonStyle.primary, row=1)
+    @discord.ui.button(label="👑 Claim", style=discord.ButtonStyle.primary, row=1, custom_id="claim")
     async def claim(self, interaction, _):
         vc = self.get_vc(interaction)
-        if not vc:
-            return
         data[str(vc.id)]["owner"] = interaction.user.id
         save(data)
         await interaction.response.send_message("👑 You are now owner", ephemeral=True)
 
-    @discord.ui.button(label="👢 Kick", style=discord.ButtonStyle.danger, row=1)
+    @discord.ui.button(label="👢 Kick", style=discord.ButtonStyle.danger, row=1, custom_id="kick")
     async def kick(self, interaction, _):
+        vc = self.get_vc(interaction)
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
-        vc = self.get_vc(interaction)
-        await interaction.response.send_modal(KickModal(vc))
 
-    @discord.ui.button(label="✏️ Rename", style=discord.ButtonStyle.secondary, row=1)
+        await interaction.response.send_message("Select user:", view=KickView(vc), ephemeral=True)
+
+    @discord.ui.button(label="✏️ Rename", style=discord.ButtonStyle.secondary, row=1, custom_id="rename")
     async def rename(self, interaction, _):
+        vc = self.get_vc(interaction)
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
-        vc = self.get_vc(interaction)
+
         await interaction.response.send_modal(RenameModal(vc))
 
-    @discord.ui.button(label="📶 Bitrate", style=discord.ButtonStyle.secondary, row=1)
-    async def bitrate(self, interaction, _):
+    @discord.ui.button(label="👥 Limit", style=discord.ButtonStyle.secondary, row=1, custom_id="limit")
+    async def limit(self, interaction, _):
+        vc = self.get_vc(interaction)
         if not self.check(interaction):
             return await interaction.response.send_message("❌ Not owner", ephemeral=True)
-        vc = self.get_vc(interaction)
-        await interaction.response.send_modal(BitrateModal(vc))
 
-    # ===== ROW 3 =====
-    @discord.ui.button(label="➕", style=discord.ButtonStyle.secondary, row=2)
-    async def increase(self, interaction, _):
-        if not self.check(interaction):
-            return await interaction.response.send_message("❌ Not owner", ephemeral=True)
-        vc = self.get_vc(interaction)
-        await vc.edit(user_limit=vc.user_limit + 1)
-        await interaction.response.send_message("➕ Increased", ephemeral=True)
-
-    @discord.ui.button(label="➖", style=discord.ButtonStyle.secondary, row=2)
-    async def decrease(self, interaction, _):
-        if not self.check(interaction):
-            return await interaction.response.send_message("❌ Not owner", ephemeral=True)
-        vc = self.get_vc(interaction)
-        await vc.edit(user_limit=max(0, vc.user_limit - 1))
-        await interaction.response.send_message("➖ Decreased", ephemeral=True)
-
-    @discord.ui.button(label="ℹ️ Info", style=discord.ButtonStyle.secondary, row=2)
-    async def info(self, interaction, _):
-        vc = self.get_vc(interaction)
-        if not vc:
-            return
-        embed = discord.Embed(
-            title="Voice Info",
-            description=f"{vc.name}\nUsers: {len(vc.members)}",
-            color=discord.Color.blurple()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_modal(LimitModal(vc))
 
 
 # ================= COG =================
@@ -194,10 +167,10 @@ class Voice(commands.Cog):
 
         join_id = data[gid].get("join")
 
-        # JOIN CREATE
+        # CREATE
         if after.channel and after.channel.id == join_id:
             vc = await member.guild.create_voice_channel(
-                name=member.name,
+                name=f"{member.name}",
                 category=after.channel.category
             )
 
@@ -206,7 +179,7 @@ class Voice(commands.Cog):
             data[str(vc.id)] = {"owner": member.id}
             save(data)
 
-        # DELETE / TRANSFER
+        # DELETE + TRANSFER
         if before.channel:
             cid = str(before.channel.id)
 
@@ -221,7 +194,7 @@ class Voice(commands.Cog):
                         data[cid]["owner"] = new_owner.id
                         save(data)
 
-    # ===== SETUP =====
+    # ===== AUTO SETUP =====
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def voicesetup(self, ctx):
@@ -229,7 +202,7 @@ class Voice(commands.Cog):
         category = await ctx.guild.create_category("🎧 Voice")
 
         join = await ctx.guild.create_voice_channel("➕ Join to Create", category=category)
-        panel = await ctx.guild.create_text_channel("🎛 interface", category=category)
+        panel = await ctx.guild.create_text_channel("🎛 voice-control", category=category)
 
         gid = str(ctx.guild.id)
         data.setdefault(gid, {})
@@ -237,14 +210,14 @@ class Voice(commands.Cog):
         save(data)
 
         embed = discord.Embed(
-            title="🎛 VoiceMaster",
-            description="Use buttons below to control your channel",
+            title="🎛 VoiceMaster Premium",
+            description="Control your voice channel using the buttons below.",
             color=discord.Color.blurple()
         )
 
         await panel.send(embed=embed, view=VoicePanel())
 
-        await ctx.send("✅ Voice system created")
+        await ctx.send("✅ Voice system fully created")
 
 
 # ================= SETUP =================
