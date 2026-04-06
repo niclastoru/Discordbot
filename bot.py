@@ -23,7 +23,6 @@ async def on_ready():
     print(f"📁 Loaded cogs: {list(bot.cogs.keys())}")
 
 async def load_cogs():
-    # ALLE Cogs in der richtigen Reihenfolge
     cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.settings", "cogs.help"]
     for cog in cogs:
         try:
