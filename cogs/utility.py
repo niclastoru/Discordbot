@@ -9,6 +9,63 @@ class Utility(commands.Cog, name="Utility"):
         self.snipes = {}
         self.reminders = {}
 
+class Utility(commands.Cog):
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(aliases=["si"])
+    async def serverinfo(self, ctx):
+        guild = ctx.guild
+
+        humans = len([m for m in guild.members if not m.bot])
+        bots = len([m for m in guild.members if m.bot])
+
+        text_channels = len(guild.text_channels)
+        voice_channels = len(guild.voice_channels)
+        categories = len(guild.categories)
+
+        embed = discord.Embed(
+            title=guild.name,
+            color=discord.Color.blurple()
+        )
+
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
+
+        embed.add_field(
+            name="📅 Server Created",
+            value=f"<t:{int(guild.created_at.timestamp())}:F>",
+            inline=False
+        )
+
+        embed.add_field(
+            name="👑 Owner",
+            value=guild.owner.mention if guild.owner else "Unknown",
+            inline=False
+        )
+
+        embed.add_field(
+            name="👥 Members",
+            value=f"Total: {guild.member_count}\nHumans: {humans}\nBots: {bots}",
+            inline=False
+        )
+
+        embed.add_field(
+            name="📂 Channels",
+            value=f"Text: {text_channels}\nVoice: {voice_channels}\nCategory: {categories}",
+            inline=False
+        )
+
+        embed.set_footer(text=f"{ctx.guild.id}")
+
+        await ctx.send(embed=embed)
+
+
+async def setup(bot):
+    await bot.add_cog(Utility(bot))
+    
+
     # ================= USER AVATAR =================
     @commands.command()
     async def useravatar(self, ctx, member: discord.Member = None):
@@ -63,84 +120,6 @@ class Utility(commands.Cog, name="Utility"):
         embed.add_field(name="Joined", value=member.joined_at)
         embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.send(embed=embed)
-
-    # ================= SERVER INFO =================
-    @commands.command(aliases=["si"])
-       async def serverinfo(self, ctx):
-    guild = ctx.guild
-
-    humans = len([m for m in guild.members if not m.bot])
-    bots = len([m for m in guild.members if m.bot])
-
-    text_channels = len(guild.text_channels)
-    voice_channels = len(guild.voice_channels)
-    categories = len(guild.categories)
-
-    embed = discord.Embed(
-        title=guild.name,
-        color=discord.Color.blurple()
-    )
-
-    # ICON RECHTS
-    if guild.icon:
-        embed.set_thumbnail(url=guild.icon.url)
-
-    # CREATED
-    embed.add_field(
-        name="📅 Server Created",
-        value=f"<t:{int(guild.created_at.timestamp())}:F>",
-        inline=False
-    )
-
-    # OWNER
-    embed.add_field(
-        name="👑 Owner",
-        value=guild.owner.mention,
-        inline=False
-    )
-
-    # MEMBERS
-    embed.add_field(
-        name="👥 Members",
-        value=f"Total: {guild.member_count}\nHumans: {humans}\nBots: {bots}",
-        inline=False
-    )
-
-    # INFO
-    embed.add_field(
-        name="⚙️ Info",
-        value=f"Verification: {guild.verification_level}\nBoosts: {guild.premium_subscription_count} (Level {guild.premium_tier})",
-        inline=False
-    )
-
-    # DESIGN
-    embed.add_field(
-        name="🎨 Design",
-        value=f"Banner: {'Yes' if guild.banner else 'No'}\nIcon: {'Yes' if guild.icon else 'No'}\nSplash: {'Yes' if guild.splash else 'No'}",
-        inline=False
-    )
-
-    # CHANNELS
-    embed.add_field(
-        name="📂 Channels",
-        value=f"Text: {text_channels}\nVoice: {voice_channels}\nCategory: {categories}",
-        inline=False
-    )
-
-    # COUNTS
-    embed.add_field(
-        name="📊 Counts",
-        value=f"Roles: {len(guild.roles)}\nEmojis: {len(guild.emojis)}\nBoosters: {guild.premium_subscription_count}",
-        inline=False
-    )
-
-    embed.set_footer(
-        text=f"Guild ID: {guild.id} • Requested by {ctx.author}",
-        icon_url=ctx.author.display_avatar.url
-    )
-
-        await ctx.send(embed=embed)
-  
 
     # ================= MEMBER COUNT =================
     @commands.command()
