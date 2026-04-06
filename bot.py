@@ -26,7 +26,7 @@ async def on_ready():
     print(f"🔧 Total commands: {len(bot.commands)}")
 
 async def load_cogs():
-    cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.help"]
+    cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.help", "cogs.settings"]
     for cog in cogs:
         try:
             await bot.load_extension(cog)
