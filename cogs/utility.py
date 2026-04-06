@@ -184,20 +184,7 @@ class Utility(commands.Cog):
         else:
             await ctx.send("❌ No splash.")
 
-    @commands.command()
-    async def help(self, ctx, command_name: str = None):
-        if command_name:
-            cmd = self.bot.get_command(command_name.lower())
-            if cmd:
-                await ctx.send(f"**!{cmd.name}** - {cmd.help or 'No description'}")
-            else:
-                await ctx.send(f"❌ Command `{command_name}` not found.")
-            return
-        
-        cmds = ["useravatar", "base64", "boosters", "chat", "chatgpt", "clearsnipe", "dump", "embed", "guildbanner", "guildicon", "guildsplash", "help", "membercount", "remind", "reminders", "screenshot", "sav", "banner", "serverinfo", "snipe", "stealemoji", "userinfo", "vc"]
-        embed = discord.Embed(title="Utility Commands", description="\n".join([f"`!{c}`" for c in cmds]), color=discord.Color.blue())
-        await ctx.send(embed=embed)
-
+  
     @commands.command()
     async def membercount(self, ctx):
         total = ctx.guild.member_count
