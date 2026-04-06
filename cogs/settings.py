@@ -9,12 +9,12 @@ class Settings(commands.Cog):
         self.bot = bot
         self.db_path = "settings.db"
         self.init_database()
+        print("✅ Settings Cog geladen!")
 
     def init_database(self):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
         
-        # Main settings table
         c.execute('''CREATE TABLE IF NOT EXISTS server_settings (
             guild_id TEXT PRIMARY KEY,
             jail_role TEXT,
@@ -25,14 +25,12 @@ class Settings(commands.Cog):
             whitelist_roles TEXT
         )''')
         
-        # Staff roles list (separate table for multiple roles)
         c.execute('''CREATE TABLE IF NOT EXISTS staff_roles (
             guild_id TEXT,
             role_id TEXT,
             PRIMARY KEY (guild_id, role_id)
         )''')
         
-        # Whitelist roles list
         c.execute('''CREATE TABLE IF NOT EXISTS whitelist_roles (
             guild_id TEXT,
             role_id TEXT,
@@ -41,8 +39,8 @@ class Settings(commands.Cog):
         
         conn.commit()
         conn.close()
+        print("✅ Settings Datenbank initialisiert!")
 
-    # ========== HELPER METHODS ==========
     def get_setting(self, guild_id, key):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
@@ -113,12 +111,11 @@ class Settings(commands.Cog):
         await ctx.send(embed=embed)
 
     # ========== JAIL-SETTINGS ==========
-    @commands.command()
+    @commands.command(help="Sets the jail role and jail channel")
     @commands.has_permissions(administrator=True)
     async def jail_settings(self, ctx, role: discord.Role = None, channel: discord.TextChannel = None):
         """Sets the jail role and jail channel. Usage: !jail_settings @Jailed #jail-channel"""
         if role is None and channel is None:
-            # Show current settings
             current_role_id = self.get_setting(ctx.guild.id, "jail_role")
             current_channel_id = self.get_setting(ctx.guild.id, "jail_channel")
             
@@ -149,7 +146,7 @@ class Settings(commands.Cog):
                                   discord.Color.green())
 
     # ========== SETTINGS-JAILMSG ==========
-    @commands.command()
+    @commands.command(help="Sets the message sent when a user is jailed. Use {user} for mention, {reason} for reason.")
     @commands.has_permissions(administrator=True)
     async def settings_jailmsg(self, ctx, *, message: str = None):
         """Sets the message sent when a user is jailed. Use {user} for mention, {reason} for reason."""
@@ -171,28 +168,25 @@ class Settings(commands.Cog):
                                   discord.Color.green())
 
     # ========== SETTINGS ==========
-    @commands.command()
+    @commands.command(help="Shows all current server settings")
     @commands.has_permissions(administrator=True)
     async def settings(self, ctx):
         """Shows all current server settings"""
         jail_role_id = self.get_setting(ctx.guild.id, "jail_role")
         jail_channel_id = self.get_setting(ctx.guild.id, "jail_channel")
         jail_msg = self.get_setting(ctx.guild.id, "jail_message")
-        log_channel_id = self.get_setting(ctx.guild.id, "log_channel")
         
         staff_roles = self.get_staff_roles(ctx.guild.id)
         whitelist_roles = self.get_whitelist_roles(ctx.guild.id)
         
         embed = discord.Embed(title=f"⚙️ Server Settings - {ctx.guild.name}", color=discord.Color.blue(), timestamp=datetime.now())
         
-        # Jail Settings
         jail_role = ctx.guild.get_role(int(jail_role_id)) if jail_role_id else None
         jail_channel = ctx.guild.get_channel(int(jail_channel_id)) if jail_channel_id else None
         embed.add_field(name="🔒 Jail Role", value=jail_role.mention if jail_role else "Not set", inline=True)
         embed.add_field(name="🔒 Jail Channel", value=jail_channel.mention if jail_channel else "Not set", inline=True)
         embed.add_field(name="📝 Jail Message", value="Custom" if jail_msg else "Default", inline=True)
         
-        # Staff Roles
         if staff_roles:
             roles_list = []
             for role_id in staff_roles[:5]:
@@ -203,7 +197,6 @@ class Settings(commands.Cog):
         else:
             embed.add_field(name="👔 Staff Roles", value="No staff roles set", inline=False)
         
-        # Whitelist Roles
         if whitelist_roles:
             roles_list = []
             for role_id in whitelist_roles[:5]:
@@ -218,7 +211,7 @@ class Settings(commands.Cog):
         await ctx.send(embed=embed)
 
     # ========== SETTINGSSTAFF ==========
-    @commands.command()
+    @commands.command(help="Adds or removes staff roles. Usage: !settingsstaff add @role | !settingsstaff remove @role")
     @commands.has_permissions(administrator=True)
     async def settingsstaff(self, ctx, action: str = None, role: discord.Role = None):
         """Adds or removes staff roles. Usage: !settingsstaff add @role | !settingsstaff remove @role"""
@@ -239,7 +232,7 @@ class Settings(commands.Cog):
             await self.error_embed(ctx, "Invalid Action", "Use `add` or `remove`.", "settingsstaff add @Moderator")
 
     # ========== SETTINGSSTAFFLIST ==========
-    @commands.command()
+    @commands.command(help="Lists all staff roles")
     @commands.has_permissions(administrator=True)
     async def settingsstafflist(self, ctx):
         """Lists all staff roles"""
@@ -261,7 +254,7 @@ class Settings(commands.Cog):
         await ctx.send(embed=embed)
 
     # ========== SETTINGSSTAFFWHITELIST ==========
-    @commands.command()
+    @commands.command(help="Adds or removes whitelist roles. Usage: !settingsstaffwhitelist add @role | !settingsstaffwhitelist remove @role")
     @commands.has_permissions(administrator=True)
     async def settingsstaffwhitelist(self, ctx, action: str = None, role: discord.Role = None):
         """Adds or removes whitelist roles. Usage: !settingsstaffwhitelist add @role | !settingsstaffwhitelist remove @role"""
@@ -282,7 +275,7 @@ class Settings(commands.Cog):
             await self.error_embed(ctx, "Invalid Action", "Use `add` or `remove`.", "settingsstaffwhitelist add @Trusted")
 
     # ========== STAFF ==========
-    @commands.command()
+    @commands.command(help="Staff management commands. Usage: !staff add @user | !staff remove @user | !staff list")
     @commands.has_permissions(administrator=True)
     async def staff(self, ctx, action: str = None, member: discord.Member = None, *, reason: str = None):
         """Staff management commands. Usage: !staff add @user | !staff remove @user | !staff list"""
@@ -307,7 +300,6 @@ class Settings(commands.Cog):
             await self.error_embed(ctx, "No Valid Staff Roles", "The configured staff roles no longer exist.", "settingsstaff add @Moderator")
             return
         
-        # List staff members
         if action.lower() == "list":
             staff_members = []
             for member in ctx.guild.members:
@@ -323,7 +315,6 @@ class Settings(commands.Cog):
                 await ctx.send(embed=embed)
             return
         
-        # Add staff role to member
         if action.lower() == "add":
             if member is None:
                 await self.error_embed(ctx, "Missing Member", "You need to mention a member to add as staff.", "staff add @user")
@@ -340,7 +331,6 @@ class Settings(commands.Cog):
             else:
                 await self.error_embed(ctx, "Already Staff", f"{member.mention} already has all staff roles.", None)
         
-        # Remove staff role from member
         elif action.lower() == "remove":
             if member is None:
                 await self.error_embed(ctx, "Missing Member", "You need to mention a member to remove as staff.", "staff remove @user")
@@ -360,22 +350,6 @@ class Settings(commands.Cog):
         else:
             await self.error_embed(ctx, "Invalid Action", "Use `add`, `remove`, or `list`.", "staff add @user")
 
-    # ========== ERROR HANDLER ==========
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            missing = error.missing_permissions[0] if error.missing_permissions else "unknown"
-            embed = discord.Embed(title="❌ Missing Permission", description=f"You need `{missing}` to use `!{ctx.command.name}`.", color=discord.Color.red())
-            await ctx.send(embed=embed)
-        elif isinstance(error, commands.MissingRequiredArgument):
-            embed = discord.Embed(title="❌ Missing Argument", description="You are missing a required argument.", color=discord.Color.red())
-            embed.add_field(name="📝 Example", value=f"`!{ctx.command.name} {ctx.command.signature if ctx.command.signature else ''}`", inline=False)
-            await ctx.send(embed=embed)
-        elif isinstance(error, commands.BadArgument):
-            embed = discord.Embed(title="❌ Invalid Argument", description="Please check your command arguments.", color=discord.Color.red())
-            await ctx.send(embed=embed)
-        else:
-            print(f"Unhandled error: {error}")
-
 async def setup(bot):
     await bot.add_cog(Settings(bot))
+    print("✅ Settings Cog wurde zum Bot hinzugefügt!")
