@@ -14,7 +14,11 @@ bot = commands.Bot(
 )
 
 # ================= READY =================
-
+@bot.event
+async def on_ready():
+    bot.add_view(VoicePanel())
+    print(f"🔥 {bot.user} ready")
+    
 @bot.event
 async def on_ready():
     print(f"🔥 {bot.user} is online")
