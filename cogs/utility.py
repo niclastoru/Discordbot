@@ -3,27 +3,19 @@ from discord.ext import commands
 import base64
 import asyncio
 
-class Utility(commands.Cog, name="Utility"):
+
+class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.snipes = {}
-        self.reminders = {}
 
-class Utility(commands.Cog):
-
-    def __init__(self, bot):
-        self.bot = bot
-
+    # ================= SERVER INFO =================
     @commands.command(aliases=["si"])
     async def serverinfo(self, ctx):
         guild = ctx.guild
 
         humans = len([m for m in guild.members if not m.bot])
         bots = len([m for m in guild.members if m.bot])
-
-        text_channels = len(guild.text_channels)
-        voice_channels = len(guild.voice_channels)
-        categories = len(guild.categories)
 
         embed = discord.Embed(
             title=guild.name,
@@ -34,12 +26,6 @@ class Utility(commands.Cog):
             embed.set_thumbnail(url=guild.icon.url)
 
         embed.add_field(
-            name="📅 Server Created",
-            value=f"<t:{int(guild.created_at.timestamp())}:F>",
-            inline=False
-        )
-
-        embed.add_field(
             name="👑 Owner",
             value=guild.owner.mention if guild.owner else "Unknown",
             inline=False
@@ -47,84 +33,115 @@ class Utility(commands.Cog):
 
         embed.add_field(
             name="👥 Members",
-            value=f"Total: {guild.member_count}\nHumans: {humans}\nBots: {bots}",
+            value=f"{guild.member_count} total\n{humans} humans | {bots} bots",
             inline=False
         )
 
         embed.add_field(
             name="📂 Channels",
-            value=f"Text: {text_channels}\nVoice: {voice_channels}\nCategory: {categories}",
+            value=f"{len(guild.text_channels)} Text\n{len(guild.voice_channels)} Voice",
             inline=False
         )
 
-        embed.set_footer(text=f"{ctx.guild.id}")
+        embed.add_field(
+            name="📊 Stats",
+            value=f"{len(guild.roles)} Roles\n{len(guild.emojis)} Emojis",
+            inline=False
+        )
+
+        embed.set_footer(text=f"Guild ID: {guild.id}")
 
         await ctx.send(embed=embed)
 
-
-async def setup(bot):
-    await bot.add_cog(Utility(bot))
-    
-
-    # ================= USER AVATAR =================
-    @commands.command()
-    async def useravatar(self, ctx, member: discord.Member = None):
+    # ================= AVATAR =================
+    @commands.command(aliases=["av"])
+    async def avatar(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        await ctx.send(member.display_avatar.url)
 
-    # ================= USER BANNER =================
+        embed = discord.Embed(
+            title=f"Avatar of {member}",
+            color=discord.Color.blurple()
+        )
+
+        embed.set_image(url=member.display_avatar.url)
+
+        await ctx.send(embed=embed)
+
+    # ================= BANNER =================
     @commands.command()
-    async def userbanner(self, ctx, member: discord.Member = None):
+    async def banner(self, ctx, member: discord.Member = None):
         member = member or ctx.author
         user = await self.bot.fetch_user(member.id)
+
         if user.banner:
-            await ctx.send(user.banner.url)
+            embed = discord.Embed(
+                title=f"Banner of {member}",
+                color=discord.Color.blurple()
+            )
+            embed.set_image(url=user.banner.url)
         else:
-            await ctx.send("❌ No banner")
+            embed = discord.Embed(
+                title="❌ No Banner",
+                description=f"{member} has no banner",
+                color=discord.Color.red()
+            )
 
-    # ================= SERVER BANNER =================
-    @commands.command()
-    async def sbanner(self, ctx):
-        if ctx.guild.banner:
-            await ctx.send(ctx.guild.banner.url)
-        else:
-            await ctx.send("❌ No banner")
-
-    # ================= GUILD ICON =================
-    @commands.command()
-    async def guildicon(self, ctx):
-        await ctx.send(ctx.guild.icon.url if ctx.guild.icon else "❌ No icon")
-
-    # ================= GUILD BANNER =================
-    @commands.command()
-    async def guildbanner(self, ctx):
-        if ctx.guild.banner:
-            await ctx.send(ctx.guild.banner.url)
-        else:
-            await ctx.send("❌ No banner")
-
-    # ================= GUILD SPLASH =================
-    @commands.command()
-    async def guildsplash(self, ctx):
-        if ctx.guild.splash:
-            await ctx.send(ctx.guild.splash.url)
-        else:
-            await ctx.send("❌ No splash")
-
-    # ================= USER INFO =================
-    @commands.command()
-    async def userinfo(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        embed = discord.Embed(title=str(member), color=discord.Color.blurple())
-        embed.add_field(name="ID", value=member.id)
-        embed.add_field(name="Joined", value=member.joined_at)
-        embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.send(embed=embed)
 
-    # ================= MEMBER COUNT =================
+    # ================= USER INFO =================
+    @commands.command(aliases=["ui"])
+    async def userinfo(self, ctx, member: discord.Member = None):
+        member = member or ctx.author
+
+        embed = discord.Embed(
+            title=str(member),
+            color=discord.Color.blurple()
+        )
+
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+        embed.add_field(name="ID", value=member.id, inline=False)
+        embed.add_field(name="Joined", value=member.joined_at.strftime("%d.%m.%Y"), inline=True)
+        embed.add_field(name="Created", value=member.created_at.strftime("%d.%m.%Y"), inline=True)
+
+        roles = [r.mention for r in member.roles if r.name != "@everyone"]
+        embed.add_field(
+            name=f"Roles [{len(roles)}]",
+            value=" ".join(roles[:10]) if roles else "None",
+            inline=False
+        )
+
+        await ctx.send(embed=embed)
+
+    # ================= SNIPE =================
+    @commands.Cog.listener()
+    async def on_message_delete(self, message):
+        if message.author.bot:
+            return
+
+        self.snipes[message.channel.id] = message
+
     @commands.command()
-    async def membercount(self, ctx):
-        await ctx.send(f"👥 {ctx.guild.member_count} members")
+    async def snipe(self, ctx):
+        msg = self.snipes.get(ctx.channel.id)
+
+        if not msg:
+            return await ctx.send("❌ Nothing to snipe")
+
+        embed = discord.Embed(
+            description=msg.content or "*No text*",
+            color=discord.Color.blurple()
+        )
+
+        embed.set_footer(text=f"{msg.author}")
+
+        await ctx.send(embed=embed)
+
+    # ================= CLEAR SNIPE =================
+    @commands.command()
+    async def clearsnipe(self, ctx):
+        self.snipes.pop(ctx.channel.id, None)
+        await ctx.send("🧹 Snipe cleared")
 
     # ================= BASE64 =================
     @commands.command()
@@ -132,68 +149,19 @@ async def setup(bot):
         encoded = base64.b64encode(text.encode()).decode()
         await ctx.send(encoded)
 
-    # ================= CHAT =================
-    @commands.command()
-    async def chat(self, ctx, *, text):
-        await ctx.send(text)
-
-    # ================= CHATGPT (FAKE) =================
-    @commands.command()
-    async def chatgpt(self, ctx, *, text):
-        await ctx.send(f"🤖 {text}")
-
-    # ================= SNIPE =================
-    @commands.Cog.listener()
-    async def on_message_delete(self, message):
-        self.snipes[message.channel.id] = message
-
-    @commands.command()
-    async def snipe(self, ctx):
-        msg = self.snipes.get(ctx.channel.id)
-        if not msg:
-            return await ctx.send("❌ Nothing to snipe")
-        await ctx.send(f"{msg.author}: {msg.content}")
-
-    # ================= CLEARSNIPE =================
-    @commands.command()
-    async def clearsnipe(self, ctx):
-        self.snipes.pop(ctx.channel.id, None)
-        await ctx.send("🧹 Cleared snipe")
-
-    # ================= DUMP =================
-    @commands.command()
-    async def dump(self, ctx):
-        roles = "\n".join([r.name for r in ctx.guild.roles])
-        await ctx.send(f"Roles:\n{roles}")
-
-    # ================= BOOSTERS =================
-    @commands.command()
-    async def boosters(self, ctx):
-        boosters = [m.mention for m in ctx.guild.premium_subscribers]
-        await ctx.send("\n".join(boosters) if boosters else "No boosters")
-
     # ================= REMIND =================
     @commands.command()
     async def remind(self, ctx, seconds: int, *, text):
         await ctx.send(f"⏰ Reminder set for {seconds}s")
 
         await asyncio.sleep(seconds)
+
         await ctx.send(f"🔔 {ctx.author.mention} {text}")
 
-    # ================= REMINDERS =================
+    # ================= MEMBERCOUNT =================
     @commands.command()
-    async def reminders(self, ctx):
-        await ctx.send("📋 Active reminders not stored (basic system)")
-
-    # ================= SCREENSHOT =================
-    @commands.command()
-    async def screenshot(self, ctx, url):
-        await ctx.send(f"📸 Screenshot: {url}")
-
-    # ================= SAV =================
-    @commands.command()
-    async def sav(self, ctx):
-        await ctx.send(ctx.author.display_avatar.url)
+    async def membercount(self, ctx):
+        await ctx.send(f"👥 {ctx.guild.member_count} members")
 
     # ================= VC =================
     @commands.command()
@@ -201,15 +169,8 @@ async def setup(bot):
         if ctx.author.voice:
             await ctx.send(f"🎤 {ctx.author.voice.channel.name}")
         else:
-            await ctx.send("❌ Not in VC")
+            await ctx.send("❌ Not in a voice channel")
 
-    # ================= STEALEMOJI =================
-    @commands.command()
-    async def stealemoji(self, ctx, emoji: discord.PartialEmoji):
-        new = await ctx.guild.create_custom_emoji(name=emoji.name, image=await emoji.read())
-        await ctx.send(f"✅ Added {new}")
 
-    #
-# ================= SETUP =================
 async def setup(bot):
     await bot.add_cog(Utility(bot))
