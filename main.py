@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os
+from cogs.voice import VoicePanel
 
 TOKEN = os.getenv("TOKEN")
 
