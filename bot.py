@@ -14,8 +14,6 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Remove default help command
 bot.remove_command("help")
 
 @bot.event
@@ -23,10 +21,10 @@ async def on_ready():
     print(f"✅ Bot online: {bot.user.name}")
     print(f"📁 Servers: {len(bot.guilds)}")
     print(f"📁 Loaded cogs: {list(bot.cogs.keys())}")
-    print(f"🔧 Total commands: {len(bot.commands)}")
 
 async def load_cogs():
-    cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.help", "cogs.settings"]
+    # ALLE Cogs in der richtigen Reihenfolge
+    cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.settings", "cogs.help"]
     for cog in cogs:
         try:
             await bot.load_extension(cog)
