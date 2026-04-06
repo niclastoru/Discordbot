@@ -1,15 +1,143 @@
 import discord
 from discord.ext import commands
 from datetime import datetime, timedelta
+import sqlite3
+import os
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.warns = {}  # {member_id: [{"reason": "", "mod": "", "date": ""}]}
-        self.bad_words = []  # List of filtered words
-        self.jailed_role_name = "Jailed"
-        self.jail_channel_id = None
-        self.log_channel_id = None
+        self.db_path = "moderation.db"
+        self.init_database()
+        self.load_settings()
+
+    def init_database(self):
+        """Initialisiert alle Tabellen für Multi-Server"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        
+        # Tabelle für Warns
+        c.execute('''CREATE TABLE IF NOT EXISTS warns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT,
+            user_id TEXT,
+            reason TEXT,
+            mod_name TEXT,
+            date TEXT
+        )''')
+        
+        # Tabelle für Jail-Settings pro Server
+        c.execute('''CREATE TABLE IF NOT EXISTS jail_settings (
+            guild_id TEXT PRIMARY KEY,
+            role_name TEXT,
+            channel_id TEXT
+        )''')
+        
+        # Tabelle für Log-Channel pro Server
+        c.execute('''CREATE TABLE IF NOT EXISTS log_settings (
+            guild_id TEXT PRIMARY KEY,
+            channel_id TEXT
+        )''')
+        
+        # Tabelle für Wordfilter pro Server
+        c.execute('''CREATE TABLE IF NOT EXISTS wordfilters (
+            guild_id TEXT,
+            word TEXT,
+            PRIMARY KEY (guild_id, word)
+        )''')
+        
+        conn.commit()
+        conn.close()
+
+    def load_settings(self):
+        """Lade Settings werden bei Bedarf aus DB geladen"""
+        pass
+
+    def get_warns(self, guild_id, user_id):
+        """Holt alle Warns eines Users auf einem Server"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("SELECT reason, mod_name, date FROM warns WHERE guild_id = ? AND user_id = ? ORDER BY id DESC", (str(guild_id), str(user_id)))
+        result = c.fetchall()
+        conn.close()
+        return [{"reason": r[0], "mod": r[1], "date": r[2]} for r in result]
+
+    def add_warn(self, guild_id, user_id, reason, mod_name, date):
+        """Fügt einen Warn hinzu"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("INSERT INTO warns (guild_id, user_id, reason, mod_name, date) VALUES (?, ?, ?, ?, ?)",
+                  (str(guild_id), str(user_id), reason, mod_name, date))
+        conn.commit()
+        conn.close()
+
+    def clear_warns(self, guild_id, user_id):
+        """Löscht alle Warns eines Users auf einem Server"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("DELETE FROM warns WHERE guild_id = ? AND user_id = ?", (str(guild_id), str(user_id)))
+        conn.commit()
+        conn.close()
+
+    # ========== JAIL SETTINGS ==========
+    def get_jail_settings(self, guild_id):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("SELECT role_name, channel_id FROM jail_settings WHERE guild_id = ?", (str(guild_id),))
+        result = c.fetchone()
+        conn.close()
+        return result if result else ("Jailed", None)
+
+    def set_jail_settings(self, guild_id, role_name=None, channel_id=None):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        existing = self.get_jail_settings(guild_id)
+        new_role = role_name if role_name else existing[0]
+        new_channel = channel_id if channel_id else existing[1]
+        c.execute("INSERT OR REPLACE INTO jail_settings (guild_id, role_name, channel_id) VALUES (?, ?, ?)",
+                  (str(guild_id), new_role, new_channel))
+        conn.commit()
+        conn.close()
+
+    # ========== LOG SETTINGS ==========
+    def get_log_channel(self, guild_id):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("SELECT channel_id FROM log_settings WHERE guild_id = ?", (str(guild_id),))
+        result = c.fetchone()
+        conn.close()
+        return result[0] if result else None
+
+    def set_log_channel(self, guild_id, channel_id):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO log_settings (guild_id, channel_id) VALUES (?, ?)",
+                  (str(guild_id), channel_id))
+        conn.commit()
+        conn.close()
+
+    # ========== WORD FILTER ==========
+    def get_wordfilter_words(self, guild_id):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("SELECT word FROM wordfilters WHERE guild_id = ?", (str(guild_id),))
+        result = [row[0] for row in c.fetchall()]
+        conn.close()
+        return result
+
+    def add_wordfilter_word(self, guild_id, word):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("INSERT OR IGNORE INTO wordfilters (guild_id, word) VALUES (?, ?)", (str(guild_id), word.lower()))
+        conn.commit()
+        conn.close()
+
+    def remove_wordfilter_word(self, guild_id, word):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("DELETE FROM wordfilters WHERE guild_id = ? AND word = ?", (str(guild_id), word.lower()))
+        conn.commit()
+        conn.close()
 
     # ========== BAN ==========
     @commands.command()
@@ -19,6 +147,7 @@ class Moderation(commands.Cog):
         await member.ban(reason=reason)
         embed = discord.Embed(title="✅ Banned", description=f"{member.mention} has been banned.\nReason: {reason}", color=discord.Color.red())
         await ctx.send(embed=embed)
+        await self.log_action(ctx, "Ban", member, reason)
 
     # ========== CLEARNICK ==========
     @commands.command()
@@ -26,7 +155,7 @@ class Moderation(commands.Cog):
     async def clearnick(self, ctx, member: discord.Member):
         """Clears a member's nickname"""
         await member.edit(nick=None)
-        embed = discord.Embed(title="🧹 Nickname cleared", description=f"{member.mention}'s nickname has been reset to {member.name}", color=discord.Color.blue())
+        embed = discord.Embed(title="🧹 Nickname cleared", description=f"{member.mention}'s nickname has been reset", color=discord.Color.blue())
         await ctx.send(embed=embed)
 
     # ========== DRAG ==========
@@ -36,7 +165,7 @@ class Moderation(commands.Cog):
         """Drags a member to another voice channel"""
         if member.voice and member.voice.channel:
             await member.move_to(target_channel)
-            embed = discord.Embed(title="🎤 Member moved", description=f"{member.mention} has been moved to {target_channel.mention}", color=discord.Color.purple())
+            embed = discord.Embed(title="🎤 Member moved", description=f"{member.mention} moved to {target_channel.mention}", color=discord.Color.purple())
             await ctx.send(embed=embed)
         else:
             await ctx.send("❌ Member is not in a voice channel.")
@@ -46,11 +175,12 @@ class Moderation(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def history(self, ctx, member: discord.Member, limit: int = 10):
         """Shows warning history of a member"""
-        if member.id not in self.warns or not self.warns[member.id]:
+        warns = self.get_warns(ctx.guild.id, member.id)
+        if not warns:
             await ctx.send(f"{member.mention} has no warnings.")
             return
         
-        warns = self.warns[member.id][-limit:]
+        warns = warns[:limit]
         embed = discord.Embed(title=f"⚠️ Warning History of {member.display_name}", color=discord.Color.orange())
         
         for i, warn in enumerate(warns, 1):
@@ -64,37 +194,43 @@ class Moderation(commands.Cog):
     async def historychannel(self, ctx, channel: discord.TextChannel = None):
         """Sets the channel for moderation logs"""
         if channel:
-            self.log_channel_id = channel.id
-            embed = discord.Embed(title="📝 Log channel set", description=f"History will be logged in {channel.mention}", color=discord.Color.green())
+            self.set_log_channel(ctx.guild.id, channel.id)
+            embed = discord.Embed(title="📝 Log channel set", description=f"Logs will be sent to {channel.mention}", color=discord.Color.green())
             await ctx.send(embed=embed)
         else:
-            await ctx.send("❌ Please specify a channel: `!historychannel #channel`")
+            self.set_log_channel(ctx.guild.id, None)
+            await ctx.send("✅ Log channel disabled.")
 
     # ========== JAIL ==========
     @commands.command()
     @commands.has_permissions(moderate_members=True)
     async def jail(self, ctx, member: discord.Member, *, reason=None):
         """Puts a member in jail"""
-        role = discord.utils.get(ctx.guild.roles, name=self.jailed_role_name)
+        role_name, jail_channel_id = self.get_jail_settings(ctx.guild.id)
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        
         if not role:
-            role = await ctx.guild.create_role(name=self.jailed_role_name, permissions=discord.Permissions(send_messages=False, add_reactions=False))
-            await ctx.send(f"⚠️ Role `{self.jailed_role_name}` was automatically created.")
+            role = await ctx.guild.create_role(name=role_name, permissions=discord.Permissions(send_messages=False, add_reactions=False, speak=False))
+            await ctx.send(f"⚠️ Role `{role_name}` was automatically created.")
         
         await member.add_roles(role)
         
-        if self.jail_channel_id:
-            jail_channel = ctx.guild.get_channel(self.jail_channel_id)
+        if jail_channel_id:
+            jail_channel = ctx.guild.get_channel(int(jail_channel_id))
             if jail_channel:
                 await jail_channel.send(f"{member.mention} has been jailed. Reason: {reason}")
         
         embed = discord.Embed(title="🔒 Jailed", description=f"{member.mention} has been put in jail.\nReason: {reason}", color=discord.Color.red())
         await ctx.send(embed=embed)
+        await self.log_action(ctx, "Jail", member, reason)
 
     # ========== JAIL-LIST ==========
     @commands.command()
     async def jail_list(self, ctx):
         """Shows all jailed members"""
-        role = discord.utils.get(ctx.guild.roles, name=self.jailed_role_name)
+        role_name, _ = self.get_jail_settings(ctx.guild.id)
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        
         if not role:
             await ctx.send("❌ No jail role found.")
             return
@@ -113,12 +249,12 @@ class Moderation(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def jail_settings(self, ctx, role_name: str = None, channel: discord.TextChannel = None):
         """Sets jail role and jail channel"""
-        if role_name:
-            self.jailed_role_name = role_name
-            await ctx.send(f"✅ Jail role set to `{role_name}`.")
-        if channel:
-            self.jail_channel_id = channel.id
-            await ctx.send(f"✅ Jail channel set to {channel.mention}.")
+        if role_name or channel:
+            self.set_jail_settings(ctx.guild.id, role_name, channel.id if channel else None)
+            await ctx.send(f"✅ Jail settings updated.\nRole: {role_name or 'unchanged'}\nChannel: {channel.mention if channel else 'unchanged'}")
+        else:
+            current_role, current_channel = self.get_jail_settings(ctx.guild.id)
+            await ctx.send(f"📋 Current jail settings:\nRole: `{current_role}`\nChannel: {f'<#{current_channel}>' if current_channel else 'Not set'}")
 
     # ========== KICK ==========
     @commands.command()
@@ -128,6 +264,7 @@ class Moderation(commands.Cog):
         await member.kick(reason=reason)
         embed = discord.Embed(title="✅ Kicked", description=f"{member.mention} has been kicked.\nReason: {reason}", color=discord.Color.orange())
         await ctx.send(embed=embed)
+        await self.log_action(ctx, "Kick", member, reason)
 
     # ========== LOCK ==========
     @commands.command()
@@ -194,7 +331,7 @@ class Moderation(commands.Cog):
         embed = discord.Embed(title="✅ Role added", description=f"{member.mention} now has {role.mention}", color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    # ========== ROLE (REMOVE) ==========
+    # ========== REMOVEROLE ==========
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def removerole(self, ctx, member: discord.Member, role: discord.Role):
@@ -235,6 +372,7 @@ class Moderation(commands.Cog):
         await member.timeout(duration, reason=reason)
         embed = discord.Embed(title="⏰ Timed out", description=f"{member.mention} has been timed out for {minutes} minutes.\nReason: {reason}", color=discord.Color.yellow())
         await ctx.send(embed=embed)
+        await self.log_action(ctx, "Timeout", member, reason)
 
     # ========== UNBAN ==========
     @commands.command()
@@ -255,7 +393,9 @@ class Moderation(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def unjail(self, ctx, member: discord.Member):
         """Releases a member from jail"""
-        role = discord.utils.get(ctx.guild.roles, name=self.jailed_role_name)
+        role_name, _ = self.get_jail_settings(ctx.guild.id)
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+        
         if role and role in member.roles:
             await member.remove_roles(role)
             embed = discord.Embed(title="🔓 Released", description=f"{member.mention} has been released from jail.", color=discord.Color.green())
@@ -289,19 +429,14 @@ class Moderation(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def warn(self, ctx, member: discord.Member, *, reason="No reason provided"):
         """Warns a member"""
-        if member.id not in self.warns:
-            self.warns[member.id] = []
+        date = datetime.now().strftime("%d.%m.%Y %H:%M")
+        self.add_warn(ctx.guild.id, member.id, reason, str(ctx.author), date)
         
-        warn_data = {
-            "reason": reason,
-            "mod": str(ctx.author),
-            "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
-            "warn_id": len(self.warns[member.id]) + 1
-        }
-        self.warns[member.id].append(warn_data)
+        warn_count = len(self.get_warns(ctx.guild.id, member.id))
         
-        embed = discord.Embed(title="⚠️ Warning", description=f"{member.mention} has been warned.\nReason: {reason}\nWarning ID: {warn_data['warn_id']}", color=discord.Color.orange())
+        embed = discord.Embed(title="⚠️ Warning", description=f"{member.mention} has been warned.\nReason: {reason}\nTotal warnings: {warn_count}", color=discord.Color.orange())
         await ctx.send(embed=embed)
+        await self.log_action(ctx, "Warning", member, reason)
         
         # Optional: DM to member
         try:
@@ -309,28 +444,32 @@ class Moderation(commands.Cog):
         except:
             pass
 
+    # ========== CLEARWARNS ==========
+    @commands.command()
+    @commands.has_permissions(administrator=True)
+    async def clearwarns(self, ctx, member: discord.Member):
+        """Clears all warns of a member"""
+        warns_before = len(self.get_warns(ctx.guild.id, member.id))
+        self.clear_warns(ctx.guild.id, member.id)
+        await ctx.send(f"✅ Cleared {warns_before} warnings from {member.mention}.")
+
     # ========== WORD FILTER ==========
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def wordfilter(self, ctx, action, *, word=None):
         """!wordfilter add <word> | !wordfilter remove <word> | !wordfilter list"""
         if action == "add" and word:
-            if word.lower() not in self.bad_words:
-                self.bad_words.append(word.lower())
-                await ctx.send(f"✅ `{word}` has been added to the filter list.")
-            else:
-                await ctx.send(f"⚠️ `{word}` is already in the list.")
+            self.add_wordfilter_word(ctx.guild.id, word)
+            await ctx.send(f"✅ `{word}` has been added to the filter list.")
         
         elif action == "remove" and word:
-            if word.lower() in self.bad_words:
-                self.bad_words.remove(word.lower())
-                await ctx.send(f"✅ `{word}` has been removed from the filter list.")
-            else:
-                await ctx.send(f"⚠️ `{word}` not found in the list.")
+            self.remove_wordfilter_word(ctx.guild.id, word)
+            await ctx.send(f"✅ `{word}` has been removed from the filter list.")
         
         elif action == "list":
-            if self.bad_words:
-                await ctx.send(f"📋 **Filtered words:** {', '.join(self.bad_words)}")
+            words = self.get_wordfilter_words(ctx.guild.id)
+            if words:
+                await ctx.send(f"📋 **Filtered words:** {', '.join(words)}")
             else:
                 await ctx.send("📋 No words are being filtered.")
         
@@ -343,8 +482,10 @@ class Moderation(commands.Cog):
         if message.author.bot:
             return
         
+        bad_words = self.get_wordfilter_words(message.guild.id)
         content_lower = message.content.lower()
-        for bad_word in self.bad_words:
+        
+        for bad_word in bad_words:
             if bad_word in content_lower:
                 await message.delete()
                 await message.channel.send(f"⚠️ {message.author.mention}, that word is not allowed!", delete_after=5)
@@ -352,8 +493,9 @@ class Moderation(commands.Cog):
 
     # ========== LOG ACTION HELPER ==========
     async def log_action(self, ctx, action, member, reason):
-        if self.log_channel_id:
-            channel = ctx.guild.get_channel(self.log_channel_id)
+        log_channel_id = self.get_log_channel(ctx.guild.id)
+        if log_channel_id:
+            channel = ctx.guild.get_channel(int(log_channel_id))
             if channel:
                 embed = discord.Embed(title=f"📋 {action}", description=f"**Member:** {member.mention}\n**Reason:** {reason}\n**Mod:** {ctx.author.mention}", color=discord.Color.blue(), timestamp=datetime.now())
                 await channel.send(embed=embed)
