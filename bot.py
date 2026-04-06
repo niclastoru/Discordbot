@@ -3,11 +3,10 @@ import discord
 from discord.ext import commands
 import asyncio
 
-# Token direkt aus Environment Variable (Render setzt das automatisch)
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 if not TOKEN:
-    print("❌ DISCORD_TOKEN not found! Set it in Render Environment Variables.")
+    print("❌ DISCORD_TOKEN not found!")
     exit(1)
 
 intents = discord.Intents.default()
@@ -16,10 +15,14 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# ENTFERNT DEN STANDARD HELP COMMAND
+bot.remove_command("help")
+
 @bot.event
 async def on_ready():
     print(f"✅ Bot online: {bot.user.name}")
     print(f"📁 Servers: {len(bot.guilds)}")
+    print(f"📁 Loaded cogs: {list(bot.cogs.keys())}")
 
 async def load_cogs():
     cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.help"]
