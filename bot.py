@@ -1,82 +1,64 @@
+import os
 import discord
 from discord.ext import commands
-import os
-from cogs.voice import VoicePanel
+from dotenv import load_dotenv
+import asyncio
 
-TOKEN = os.getenv("TOKEN")
+# Lade Umgebungsvariablen
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
 
-intents = discord.Intents.all()
+# Prüfe ob Token existiert
+if not TOKEN:
+    print("❌ DISCORD_TOKEN nicht gefunden! Setze den Token in Render Environment Variables.")
+    exit(1)
 
-bot = commands.Bot(
-    command_prefix="?",
-    intents=intents,
-    case_insensitive=True,
-    help_command=None
-)
+# Intents setzen
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
 
-# ================= READY =================
-@bot.event
-async def on_ready():
-    bot.add_view(VoicePanel())
-    print(f"🔥 {bot.user} ready")
+# Bot initialisieren
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+async def load_cogs():
+    """Lädt alle Cogs aus dem cogs Ordner"""
+    cogs = ["cogs.moderation", "cogs.utility", "cogs.admin", "cogs.help"]
     
+    for cog in cogs:
+        try:
+            await bot.load_extension(cog)
+            print(f"✅ Loaded {cog}")
+        except Exception as e:
+            print(f"❌ Failed to load {cog}: {e}")
+
 @bot.event
 async def on_ready():
-    print(f"🔥 {bot.user} is online")
-
-# ================= LOAD COGS =================
-
-@bot.event
-async def setup_hook():
-    for file in os.listdir("./cogs"):
-        if file.endswith(".py"):
-            try:
-                await bot.load_extension(f"cogs.{file[:-3]}")
-                print(f"✅ Loaded cog: {file}")
-            except Exception as e:
-                print(f"❌ Failed to load {file}: {e}")
-                
-# ================= ERROR SYSTEM =================
+    """Wird ausgeführt wenn der Bot bereit ist"""
+    print(f"✅ Bot ist online als {bot.user.name}")
+    print(f"📁 Bot ist auf {len(bot.guilds)} Servern")
+    print(f"🔧 Geladene Cogs: {[cog.__class__.__name__ for cog in bot.cogs.values()]}")
+    
+    # Status setzen
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="!help"))
 
 @bot.event
 async def on_command_error(ctx, error):
-
+    """Globaler Error Handler"""
     if isinstance(error, commands.MissingPermissions):
-        return await ctx.send(embed=discord.Embed(
-            title="❌ No Permission",
-            description="You don't have permission to use this command.",
-            color=discord.Color.red()
-        ))
-
+        await ctx.send(f"❌ {ctx.author.mention}, du hast keine Berechtigung für diesen Befehl!")
     elif isinstance(error, commands.MissingRequiredArgument):
-        return await ctx.send(embed=discord.Embed(
-            title="⚠️ Wrong Usage",
-            description=f"Usage: `?{ctx.command.name} {ctx.command.signature}`",
-            color=discord.Color.orange()
-        ))
-
-    elif isinstance(error, commands.BadArgument):
-        return await ctx.send(embed=discord.Embed(
-            title="❌ Invalid Input",
-            description=f"Usage: `?{ctx.command.name} {ctx.command.signature}`",
-            color=discord.Color.red()
-        ))
-
+        await ctx.send(f"❌ Fehlendes Argument! Benutze `!help {ctx.command.name}` für Hilfe.")
     elif isinstance(error, commands.CommandNotFound):
-        return
-
+        pass  # Ignoriere unbekannte Commands
     else:
-        print(error)
+        print(f"⚠️ Error: {error}")
+        await ctx.send(f"❌ Ein Fehler ist aufgetreten: {error}")
 
-# ================= PING =================
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
-@bot.command()
-async def ping(ctx):
-    embed = discord.Embed(
-        title="🏓 Pong!",
-        description=f"Latency: {round(bot.latency * 1000)}ms",
-        color=discord.Color.green()
-    )
-    await ctx.send(embed=embed)
-
-bot.run(TOKEN)
+if __name__ == "__main__":
+    asyncio.run(main())
