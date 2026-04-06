@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timedelta
 import sqlite3
+import re
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
@@ -128,7 +129,7 @@ class Moderation(commands.Cog):
     async def error_embed(self, ctx, title, description, example=None):
         embed = discord.Embed(title=f"❌ {title}", description=description, color=discord.Color.red())
         if example:
-            embed.add_field(name="📝 Example", value=f"`!{ctx.command.name} {example}`", inline=False)
+            embed.add_field(name="📝 Example", value=f"`{example}`", inline=False)
         await ctx.send(embed=embed)
 
     async def success_embed(self, ctx, title, description, color=discord.Color.green()):
@@ -146,6 +147,23 @@ class Moderation(commands.Cog):
             await self.error_embed(ctx, "Bot Hierarchy Error", f"I cannot perform this action on {target.mention} because their role is higher than or equal to mine.", f"{ctx.command.name} @user reason")
             return False
         return True
+
+    def parse_time(self, time_str):
+        """Parses time strings like 10m, 30s, 2h, 1d into seconds"""
+        match = re.match(r'(\d+)([smhd])', time_str.lower())
+        if not match:
+            return None
+        value = int(match.group(1))
+        unit = match.group(2)
+        if unit == 's':
+            return value
+        elif unit == 'm':
+            return value * 60
+        elif unit == 'h':
+            return value * 3600
+        elif unit == 'd':
+            return value * 86400
+        return None
 
     # ========== BAN ==========
     @commands.command()
@@ -356,15 +374,15 @@ class Moderation(commands.Cog):
         await ctx.send(f"🗑️ Deleted **{len(deleted)}** messages", delete_after=3)
 
     # ========== ROLE (ADD) ==========
-    @commands.command()
+    @commands.command(aliases=["r"])
     @commands.has_permissions(manage_roles=True)
     async def role(self, ctx, member: discord.Member = None, role: discord.Role = None):
-        """Adds a role to a member"""
+        """Adds a role to a member. Alias: !r"""
         if member is None:
-            await self.error_embed(ctx, "Missing Member", "You need to mention a member to add a role.", "role @user @Member")
+            await self.error_embed(ctx, "Missing Member", "You need to mention a member to add a role.", "role @user @Member or r @user @Member")
             return
         if role is None:
-            await self.error_embed(ctx, "Missing Role", "You need to specify a role to add.", "role @user @Member")
+            await self.error_embed(ctx, "Missing Role", "You need to specify a role to add.", "role @user @Member or r @user @Member")
             return
         if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
             await self.error_embed(ctx, "Role Hierarchy Error", "You cannot assign a role above your highest role.", "role @user @Member")
@@ -417,19 +435,43 @@ class Moderation(commands.Cog):
     # ========== TIMEOUT ==========
     @commands.command()
     @commands.has_permissions(moderate_members=True)
-    async def timeout(self, ctx, member: discord.Member = None, minutes: int = None, *, reason="No reason"):
-        """Timeouts a member for X minutes"""
+    async def timeout(self, ctx, member: discord.Member = None, duration: str = None, *, reason="No reason"):
+        """Timeouts a member. Duration: 30s, 10m, 2h, 1d"""
         if member is None:
-            await self.error_embed(ctx, "Missing Member", "You need to mention a member to timeout.", "timeout @user 10 being rude")
+            await self.error_embed(ctx, "Missing Member", "You need to mention a member to timeout.", "timeout @user 10m being rude")
             return
-        if minutes is None:
-            await self.error_embed(ctx, "Missing Minutes", "You need to specify the timeout duration in minutes.", "timeout @user 10 being rude")
+        if duration is None:
+            await self.error_embed(ctx, "Missing Duration", "You need to specify the timeout duration.\n**Formats:** `30s`, `10m`, `2h`, `1d`", "timeout @user 10m being rude")
             return
         if not await self.check_hierarchy(ctx, member):
             return
-        duration = timedelta(minutes=minutes)
-        await member.timeout(duration, reason=reason)
-        await self.success_embed(ctx, "Member Timed Out", f"{member.mention} has been timed out for **{minutes}** minutes.\n**Reason:** {reason}", discord.Color.yellow())
+        
+        seconds = self.parse_time(duration)
+        if seconds is None:
+            await self.error_embed(ctx, "Invalid Duration", "Invalid time format.\n**Formats:** `30s`, `10m`, `2h`, `1d`", "timeout @user 10m being rude")
+            return
+        
+        if seconds < 1:
+            await self.error_embed(ctx, "Invalid Duration", "Duration must be at least 1 second.", "timeout @user 10m")
+            return
+        if seconds > 2419200:  # 28 days max
+            await self.error_embed(ctx, "Duration Too Long", "Timeout cannot be longer than 28 days.", "timeout @user 10m")
+            return
+        
+        duration_obj = timedelta(seconds=seconds)
+        await member.timeout(duration_obj, reason=reason)
+        
+        # Format duration for display
+        if seconds < 60:
+            display = f"{seconds} seconds"
+        elif seconds < 3600:
+            display = f"{seconds // 60} minutes"
+        elif seconds < 86400:
+            display = f"{seconds // 3600} hours"
+        else:
+            display = f"{seconds // 86400} days"
+        
+        await self.success_embed(ctx, "Member Timed Out", f"{member.mention} has been timed out for **{display}**.\n**Reason:** {reason}", discord.Color.yellow())
         await self.log_action(ctx, "Timeout", member, reason)
 
     # ========== UNBAN ==========
