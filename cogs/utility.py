@@ -139,7 +139,7 @@ class Utility(commands.Cog, name="🧰 Utility"):
         icon_url=ctx.author.display_avatar.url
     )
 
-    await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
   
 
     # ================= MEMBER COUNT =================
