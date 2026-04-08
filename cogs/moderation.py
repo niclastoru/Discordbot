@@ -59,6 +59,25 @@ class Moderation(commands.Cog):
             return False
         return True
 
+    # Helper to find member by mention, ID, or name
+    async def find_member(self, ctx, member_str):
+        member = None
+        # Try as ID
+        if member_str.isdigit():
+            member = ctx.guild.get_member(int(member_str))
+        # Try to clean mention format <@!123> or <@123>
+        if not member:
+            clean = member_str.strip('<@!>')
+            if clean.isdigit():
+                member = ctx.guild.get_member(int(clean))
+        # Try by name or display name (case-insensitive)
+        if not member:
+            for m in ctx.guild.members:
+                if m.name.lower() == member_str.lower() or m.display_name.lower() == member_str.lower():
+                    member = m
+                    break
+        return member
+
     @commands.command(name="ban")
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, *, reason="No reason provided"):
@@ -344,8 +363,22 @@ class Moderation(commands.Cog):
 
     @commands.command(name="role", aliases=["r"])
     @commands.has_permissions(manage_roles=True)
-    async def role(self, ctx, action: str, member: discord.Member, role: discord.Role):
+    async def role(self, ctx, action: str, member_str: str, role: discord.Role):
+        """Add or remove a role from a member. Usage: !r add @user @role or !r remove @user @role"""
         action = action.lower()
+        
+        # Find member using helper
+        member = await self.find_member(ctx, member_str)
+        
+        if not member:
+            embed = self.create_embed(
+                "❌ Member not found",
+                f"Could not find `{member_str}`. Use @mention, User ID, or exact name.",
+                0xED4245
+            )
+            await ctx.send(embed=embed)
+            return
+        
         if action == "add":
             await member.add_roles(role)
             embed = self.create_embed(
@@ -384,6 +417,7 @@ class Moderation(commands.Cog):
         roles = [r.mention for r in ctx.guild.roles if r.name != "@everyone"]
         if not roles:
             embed = self.create_embed("📋 Server Roles", "No roles found.", 0xFEE75C)
+            await ctx.send(embed=embed)
         else:
             # Split into chunks of 20 to avoid embed limits
             chunks = [roles[i:i+20] for i in range(0, len(roles), 20)]
@@ -395,8 +429,6 @@ class Moderation(commands.Cog):
                     footer=f"Total: {len(roles)} roles"
                 )
                 await ctx.send(embed=embed)
-            return
-        await ctx.send(embed=embed)
 
     @commands.command(name="slowmode")
     @commands.has_permissions(manage_channels=True)
