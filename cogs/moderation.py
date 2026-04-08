@@ -59,7 +59,6 @@ class Moderation(commands.Cog):
             return False
         return True
 
-    # Helper to find member by mention, ID, or name
     async def find_member(self, ctx, member_str):
         member = None
         # Try as ID
@@ -363,13 +362,17 @@ class Moderation(commands.Cog):
 
     @commands.command(name="role", aliases=["r"])
     @commands.has_permissions(manage_roles=True)
-    async def role(self, ctx, action: str, member_str: str, role: discord.Role):
-        """Add or remove a role from a member. Usage: !r add @user @role or !r remove @user @role"""
-        action = action.lower()
+    async def role(self, ctx, member_str: str, role_str: str, action: str = None):
+        """
+        Add or remove a role from a member.
+        Usage: !r @user mod          (auto-detects add/remove)
+               !r @user "Moderator"  (role with spaces in quotes)
+               !r add @user mod      (explicit add)
+               !r remove @user mod   (explicit remove)
+        """
         
-        # Find member using helper
+        # Find member
         member = await self.find_member(ctx, member_str)
-        
         if not member:
             embed = self.create_embed(
                 "❌ Member not found",
@@ -379,36 +382,90 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
             return
         
+        # Find role by name (without @) or mention
+        role = None
+        # Remove @ if user accidentally added it
+        clean_role_str = role_str.strip('<@&>').strip()
+        
+        # Try exact match
+        for r in ctx.guild.roles:
+            if r.name.lower() == clean_role_str.lower():
+                role = r
+                break
+        
+        # If not found, try partial match (starts with)
+        if not role:
+            for r in ctx.guild.roles:
+                if r.name.lower().startswith(clean_role_str.lower()):
+                    role = r
+                    break
+        
+        if not role:
+            role_list = [r.name for r in ctx.guild.roles if r.name != '@everyone'][:10]
+            embed = self.create_embed(
+                "❌ Role not found",
+                f"Could not find role `{role_str}`.\nAvailable roles: `{', '.join(role_list)}`" + ("..." if len(ctx.guild.roles) > 11 else ""),
+                0xED4245
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Determine action (auto-detect if not specified)
+        if action is None:
+            # Auto-detect: if member has role -> remove, else -> add
+            if role in member.roles:
+                action = "remove"
+            else:
+                action = "add"
+        else:
+            action = action.lower()
+        
+        # Execute action
         if action == "add":
-            await member.add_roles(role)
-            embed = self.create_embed(
-                "➕ Role Added",
-                f"Added {role.mention} to {member.mention}",
-                0x57F287,
-                fields=[
-                    ("👤 User", member.mention, True),
-                    ("🎭 Role", role.mention, True),
-                    ("👮 Moderator", ctx.author.mention, True)
-                ]
-            )
+            if role in member.roles:
+                embed = self.create_embed(
+                    "⚠️ Already Has Role",
+                    f"{member.mention} already has the role {role.mention}.",
+                    0xFEE75C
+                )
+            else:
+                await member.add_roles(role)
+                embed = self.create_embed(
+                    "➕ Role Added",
+                    f"Added {role.mention} to {member.mention}",
+                    0x57F287,
+                    fields=[
+                        ("👤 User", member.mention, True),
+                        ("🎭 Role", role.mention, True),
+                        ("👮 Moderator", ctx.author.mention, True)
+                    ]
+                )
         elif action == "remove":
-            await member.remove_roles(role)
-            embed = self.create_embed(
-                "➖ Role Removed",
-                f"Removed {role.mention} from {member.mention}",
-                0x57F287,
-                fields=[
-                    ("👤 User", member.mention, True),
-                    ("🎭 Role", role.mention, True),
-                    ("👮 Moderator", ctx.author.mention, True)
-                ]
-            )
+            if role not in member.roles:
+                embed = self.create_embed(
+                    "⚠️ Doesn't Have Role",
+                    f"{member.mention} does not have the role {role.mention}.",
+                    0xFEE75C
+                )
+            else:
+                await member.remove_roles(role)
+                embed = self.create_embed(
+                    "➖ Role Removed",
+                    f"Removed {role.mention} from {member.mention}",
+                    0x57F287,
+                    fields=[
+                        ("👤 User", member.mention, True),
+                        ("🎭 Role", role.mention, True),
+                        ("👮 Moderator", ctx.author.mention, True)
+                    ]
+                )
         else:
             embed = self.create_embed(
                 "❌ Invalid Action",
-                "Use `add` or `remove`.\nExample: `!r add @user @role`",
+                "Use `add`, `remove`, or let the bot auto-detect.\nExample: `!r @user mod`",
                 0xED4245
             )
+        
         await ctx.send(embed=embed)
 
     @commands.command(name="roles")
