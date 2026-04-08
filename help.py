@@ -26,10 +26,25 @@ class HelpSelect(Select):
         
         options = []
         
+        print(f"📋 Verfügbare Cogs für Help: {list(bot.cogs.keys())}")  # Debug
+        
         for cog_name, cog in bot.cogs.items():
             cmd_count = len([cmd for cmd in cog.get_commands() if not cmd.hidden])
+            print(f"  - {cog_name}: {cmd_count} commands")  # Debug
+            
             if cmd_count > 0 and cog_name.lower() != "help":
-                emoji = "🔨" if "mod" in cog_name.lower() else "🛠️" if "util" in cog_name.lower() else "⚙️" if "admin" in cog_name.lower() else "📁"
+                # Emoji basierend auf Cog Name
+                if "mod" in cog_name.lower():
+                    emoji = "🔨"
+                elif "admin" in cog_name.lower():
+                    emoji = "⚙️"
+                elif "setting" in cog_name.lower():
+                    emoji = "🔧"
+                elif "util" in cog_name.lower():
+                    emoji = "🛠️"
+                else:
+                    emoji = "📁"
+                
                 options.append(
                     discord.SelectOption(
                         label=cog_name,
@@ -159,6 +174,19 @@ class Help(commands.Cog):
             if cmd.aliases:
                 embed.add_field(name="Aliases", value=f"`{', '.join(cmd.aliases)}`", inline=False)
             embed.set_footer(text=f"Module: {cmd.cog.qualified_name if cmd.cog else 'Unknown'}")
+            await ctx.send(embed=embed)
+            return
+        
+        # Prüfe ob andere Cogs geladen sind
+        other_cogs = [cog for cog in self.bot.cogs.keys() if cog.lower() != "help"]
+        print(f"📋 Andere Cogs: {other_cogs}")  # Debug
+        
+        if not other_cogs:
+            embed = discord.Embed(
+                title="⚠️ No Modules Loaded",
+                description="No command modules are loaded. The bot may be starting up.",
+                color=0xFEE75C
+            )
             await ctx.send(embed=embed)
             return
         
