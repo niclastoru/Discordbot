@@ -1,6 +1,9 @@
 import os
 import discord
 from discord.ext import commands
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
 
 intents = discord.Intents.default()
 intents.message_content = True
