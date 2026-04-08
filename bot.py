@@ -17,12 +17,23 @@ async def on_ready():
     print(f"📁 Geladene Cogs: {list(bot.cogs.keys())}")
 
 async def load_cogs():
-    """Lädt alle Cogs DIREKT aus dem Hauptverzeichnis (kein cogs Ordner!)"""
-    cogs_list = ["admin", "moderation", "help"]
+    """Lädt alle Cogs aus dem Hauptverzeichnis"""
+    cogs = [
+        "moderation",
+        "admin",
+        "settings",
+        "servers",
+        "giveaway",
+        "logs",
+        "fun",
+        "leveling",
+        "utility",
+        "help"
+    ]
     
-    for cog in cogs_list:
+    for cog in cogs:
         try:
-            await bot.load_extension(cog)  # Kein "cogs." prefix!
+            await bot.load_extension(cog)
             print(f"✅ {cog} geladen")
         except Exception as e:
             print(f"❌ {cog} Fehler: {e}")
