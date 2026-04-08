@@ -7,35 +7,43 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-# WICHTIG: Standard help command deaktivieren
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
-
-async def load_cogs():
-    for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
-            try:
-                await bot.load_extension(f"cogs.{filename[:-3]}")
-                print(f"✅ Loaded {filename}")
-            except Exception as e:
-                print(f"❌ Failed to load {filename}: {e}")
 
 @bot.event
 async def on_ready():
     print(f"✅ Bot online as {bot.user}")
     print(f"Loaded cogs: {list(bot.cogs.keys())}")
 
-@bot.command(name="ping")
-async def ping(ctx):
-    await ctx.send("Pong!")
-
-@bot.command(name="cogs")
-async def show_cogs(ctx):
-    await ctx.send(f"Loaded: {list(bot.cogs.keys())}")
+async def load_cogs():
+    """Lade alle Cogs – MIT EXPLIZITER FEHLERausgabe"""
+    
+    # Liste aller Cogs die geladen werden sollen
+    cog_files = ["moderation", "utility", "help"]
+    
+    for cog in cog_files:
+        try:
+            await bot.load_extension(f"cogs.{cog}")
+            print(f"✅ SUCCESS: Loaded {cog}")
+        except Exception as e:
+            print(f"❌ FAILED: {cog}")
+            print(f"   Error: {type(e).__name__}: {e}")
+    
+    # Zusätzlich: Zeige alle Dateien im cogs Ordner
+    import os
+    print("\n📁 Files in cogs folder:")
+    try:
+        for file in os.listdir("./cogs"):
+            print(f"   - {file}")
+    except:
+        print("   ❌ Could not read cogs folder!")
 
 async def main():
     async with bot:
         await load_cogs()
         token = os.getenv("DISCORD_TOKEN")
+        if not token:
+            print("❌ NO TOKEN FOUND!")
+            return
         await bot.start(token)
 
 if __name__ == "__main__":
