@@ -37,16 +37,7 @@ async def load_cogs():
     except:
         print("   ❌ Could not read cogs folder!")
 
-async def load_cogs():
-    try:
-        print("🟢 Trying to load utility...")
-        await bot.load_extension("cogs.utility")
-        print("🟢 Utility loaded successfully")
-    except Exception as e:
-        print("🔴 UTILITY ERROR:")
-        print(repr(e))
-        import traceback
-        traceback.print_exc()
+
 
 async def main():
     async with bot:
