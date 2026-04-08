@@ -16,6 +16,34 @@ async def on_ready():
     print(f"✅ Bot ist auf {len(bot.guilds)} Servern")
     print(f"📁 Geladene Cogs: {list(bot.cogs.keys())}")
 
+@bot.command(name="cogs")
+@commands.is_owner()
+async def show_cogs(ctx):
+    """Zeigt alle geladenen Cogs (Owner only)"""
+    cogs_list = "\n".join([f"✅ {cog}" for cog in bot.cogs.keys()])
+    embed = discord.Embed(title="📁 Geladene Cogs", description=cogs_list or "Keine!", color=0x57F287)
+    await ctx.send(embed=embed)
+
+@bot.command(name="load")
+@commands.is_owner()
+async def load_cog(ctx, cog_name: str):
+    """Lade einen Cog manuell (Owner only)"""
+    try:
+        await bot.load_extension(cog_name)
+        await ctx.send(f"✅ {cog_name} geladen")
+    except Exception as e:
+        await ctx.send(f"❌ Fehler: {e}")
+
+@bot.command(name="reload")
+@commands.is_owner()
+async def reload_cog(ctx, cog_name: str):
+    """Relade einen Cog (Owner only)"""
+    try:
+        await bot.reload_extension(cog_name)
+        await ctx.send(f"✅ {cog_name} neugeladen")
+    except Exception as e:
+        await ctx.send(f"❌ Fehler: {e}")
+
 async def load_cogs():
     """Lädt alle Cogs aus dem Hauptverzeichnis"""
     cogs = [
