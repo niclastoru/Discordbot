@@ -24,6 +24,14 @@ async def on_ready():
     print(f"✅ Bot online as {bot.user}")
     print(f"Loaded cogs: {list(bot.cogs.keys())}")
 
+@bot.command(name="ping")
+async def ping(ctx):
+    await ctx.send("Pong!")
+
+@bot.command(name="cogs")
+async def show_cogs(ctx):
+    await ctx.send(f"Loaded: {list(bot.cogs.keys())}")
+
 async def main():
     async with bot:
         await load_cogs()
