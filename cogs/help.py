@@ -26,20 +26,30 @@ class HelpSelect(Select):
         
         options = []
         
-        # Sammle alle Cogs mit Commands
+        # Sammle alle Cogs mit Commands (außer Help selbst)
         for cog_name, cog in bot.cogs.items():
+            if cog_name.lower() == "help":
+                continue
             cmd_count = len([cmd for cmd in cog.get_commands() if not cmd.hidden])
-            if cmd_count > 0 and cog_name.lower() != "help":
+            if cmd_count > 0:
+                # Emoji basierend auf Cog Name
+                if "mod" in cog_name.lower():
+                    emoji = "🔨"
+                elif "util" in cog_name.lower():
+                    emoji = "🛠️"
+                else:
+                    emoji = "📁"
+                
                 options.append(
                     discord.SelectOption(
                         label=cog_name,
                         description=f"{cmd_count} commands",
-                        emoji="🔨" if "mod" in cog_name.lower() else "🛠️" if "util" in cog_name.lower() else "📁",
+                        emoji=emoji,
                         value=cog_name
                     )
                 )
         
-        # "All Commands" Option
+        # "All Commands" Option nur wenn es Optionen gibt
         if options:
             options.append(
                 discord.SelectOption(
@@ -47,6 +57,16 @@ class HelpSelect(Select):
                     description="Show all commands",
                     emoji="📋",
                     value="all"
+                )
+            )
+        
+        # Fallback falls keine Cogs geladen sind
+        if not options:
+            options.append(
+                discord.SelectOption(
+                    label="No modules loaded",
+                    description="Load moderation and utility first",
+                    value="none"
                 )
             )
         
@@ -66,6 +86,13 @@ class HelpSelect(Select):
         
         if selected == "all":
             embed = self.create_all_embed()
+        elif selected == "none":
+            embed = discord.Embed(
+                title="❌ No modules loaded",
+                description="Please load moderation and utility cogs first.",
+                color=0xFEE75C,
+                timestamp=datetime.utcnow()
+            )
         else:
             cog = self.bot.get_cog(selected)
             if cog:
@@ -83,6 +110,7 @@ class HelpSelect(Select):
         commands_list = []
         for cmd in cog.get_commands():
             if not cmd.hidden:
+                # Command Signatur
                 params = []
                 for name, param in cmd.clean_params.items():
                     if param.default == param.empty:
@@ -91,7 +119,7 @@ class HelpSelect(Select):
                         params.append(f"[{name}]")
                 
                 signature = f"!{cmd.name} {' '.join(params)}" if params else f"!{cmd.name}"
-                help_text = (cmd.help or "No description")[:100]
+                help_text = (cmd.help or "No description")[:80]
                 
                 alias_text = f" (alias: {', '.join(cmd.aliases)})" if cmd.aliases else ""
                 
@@ -104,11 +132,14 @@ class HelpSelect(Select):
             timestamp=datetime.utcnow()
         )
         
-        # Max 5 Fields
-        chunk_size = max(1, (len(commands_list) + 4) // 5)
-        for i in range(0, len(commands_list), chunk_size):
-            chunk = commands_list[i:i+chunk_size]
-            embed.add_field(name="‎", value="\n\n".join(chunk), inline=True)
+        # Max 5 Felder (verhindert leere Embeds)
+        if commands_list:
+            chunk_size = max(1, (len(commands_list) + 4) // 5)
+            for i in range(0, len(commands_list), chunk_size):
+                chunk = commands_list[i:i+chunk_size]
+                embed.add_field(name="‎", value="\n\n".join(chunk), inline=True)
+        else:
+            embed.description = "No commands available in this module."
         
         embed.set_footer(text="Use !help <command> for details")
         return embed
@@ -123,14 +154,19 @@ class HelpSelect(Select):
         
         total = 0
         for cog_name, cog in self.bot.cogs.items():
-            cmds = [f"`!{cmd.name}`" for cmd in cog.get_commands() if not cmd.hidden and cog_name.lower() != "help"]
+            if cog_name.lower() == "help":
+                continue
+            cmds = [f"`!{cmd.name}`" for cmd in cog.get_commands() if not cmd.hidden]
             if cmds:
                 total += len(cmds)
                 embed.add_field(
                     name=f"📁 {cog_name}",
-                    value=" ".join(cmds[:10]) + ("..." if len(cmds) > 10 else ""),
+                    value=" ".join(cmds[:15]) + ("..." if len(cmds) > 15 else ""),
                     inline=False
                 )
+        
+        if total == 0:
+            embed.description = "No commands loaded. Make sure moderation and utility cogs are loaded."
         
         embed.set_footer(text=f"Total: {total} commands")
         return embed
@@ -144,19 +180,20 @@ class Help(commands.Cog):
     async def help_command(self, ctx, *, command_name: str = None):
         """Show interactive help menu or command details"""
         
-        # Specific command
+        # Wenn ein bestimmter Command gesucht wird
         if command_name:
             cmd = self.bot.get_command(command_name.lower())
             if not cmd:
                 embed = discord.Embed(
                     title="❌ Command not found",
-                    description=f"`{command_name}` doesn't exist.",
+                    description=f"`{command_name}` doesn't exist.\nUse `!help` to see all commands.",
                     color=0xED4245,
                     timestamp=datetime.utcnow()
                 )
                 await ctx.send(embed=embed)
                 return
             
+            # Command Details
             params = []
             for name, param in cmd.clean_params.items():
                 if param.default == param.empty:
@@ -168,7 +205,7 @@ class Help(commands.Cog):
             
             embed = discord.Embed(
                 title=f"📖 {cmd.name}",
-                description=cmd.help or "No description",
+                description=cmd.help or "No description available.",
                 color=0x2b2d31,
                 timestamp=datetime.utcnow()
             )
@@ -181,32 +218,15 @@ class Help(commands.Cog):
             await ctx.send(embed=embed)
             return
         
-        # Interactive menu
-        # Check if there are any cogs with commands
-        has_commands = False
-        for cog in self.bot.cogs.values():
-            if cog.get_commands() and cog.qualified_name.lower() != "help":
-                has_commands = True
-                break
-        
-        if not has_commands:
-            embed = discord.Embed(
-                title="🤖 Bot Commands",
-                description="No commands loaded yet. Make sure other cogs are loaded.",
-                color=0xFEE75C,
-                timestamp=datetime.utcnow()
-            )
-            await ctx.send(embed=embed)
-            return
-        
+        # Interaktives Help-Menü
         view = HelpView(self.bot, ctx)
         select = HelpSelect(self.bot, ctx)
         view.add_item(select)
         
-        # First cog as initial embed
+        # Erstes Modul als Initialansicht (außer Help)
         first_cog = None
         for cog_name, cog in self.bot.cogs.items():
-            if cog.get_commands() and cog_name.lower() != "help":
+            if cog_name.lower() != "help" and len(cog.get_commands()) > 0:
                 first_cog = cog
                 break
         
